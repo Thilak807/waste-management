@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Admin — WasteSort AI{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="section-head">
+    <h2>Admin Dashboard</h2>
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+  <div class="mode-banner mode-{{ model_info.mode }}">
+    <strong>YOLO:</strong> {{ model_info.mode }}
+    <span>{{ model_info.note }}</span>
+  </div>
+  <p>Total detections stored: <strong>{{ stats.total }}</strong>
+    · <a href="{{ url_for('admin_reports') }}">View reports</a>
+  </p>
+</section>
+
+<section class="panel">
+  <h2>Manage Users</h2>
+  <form method="post" action="{{ url_for('admin_users') }}" class="inline-form">
+    <input type="hidden" name="action" value="add" />
+    <input name="username" placeholder="username" required />
+    <input name="password" placeholder="password" required />
+    <select name="role"><option value="user">user</option><option value="admin">admin</option></select>
+    <button class="btn btn-primary" type="submit">Add user</button>
+  </form>
+  <ul class="plain-list">
+    {% for u in users %}
+    <li>
+      {{ u.username }} ({{ u.role }})
+      {% if u.role != 'admin' %}
+      <form method="post" action="{{ url_for('admin_users') }}" class="inline">
+        <input type="hidden" name="action" value="delete" />
+        <input type="hidden" name="user_id" value="{{ u.id }}" />
+        <button type="submit" class="linkish">Delete</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Waste Categories</h2>
+  <ul class="plain-list">
+    {% for c in categories %}
+    <li><strong>{{ c.name }}</strong> — class_id {{ c.class_id }} · {{ c.description }}</li>
+    {% endfor %}
+  </ul>
+  <form method="post" action="{{ url_for('admin_categories') }}" class="inline-form">
+    <input name="name" placeholder="new class name" required />
+    <input name="class_id" type="number" placeholder="class id" required />
+    <input name="description" placeholder="description" />
+    <button class="btn btn-secondary" type="submit">Add category</button>
+  </form>
+  <p class="hint">After adding a YOLO class, update <code>dataset/data.yaml</code> and retrain.</p>
+</section>
+
+<section class="panel">
+  <h2>Update Recycling Recommendations</h2>
+  {% for name, rec in recommendations.items() %}
+  <form method="post" action="{{ url_for('admin_recommendations') }}" class="stack-form rec-form">
+    <h3>{{ name|title }}</h3>
+    <input type="hidden" name="class_name" value="{{ name }}" />
+    <label>Category <input name="category" value="{{ rec.category }}" /></label>
+    <label>Recommendation <textarea name="recommendation" rows="3">{{ rec.recommendation }}</textarea></label>
+    <label>Tips <textarea name="disposal_tips" rows="2">{{ rec.disposal_tips }}</textarea></label>
+    <button class="btn btn-secondary" type="submit">Save {{ name }}</button>
+  </form>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Add Dataset Image</h2>
+  <form method="post" action="{{ url_for('admin_dataset') }}" enctype="multipart/form-data" class="inline-form">
+    <input type="file" name="image" accept="image/*" required />
+    <select name="class_name">
+      {% for c in class_names %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <select name="split">
+      <option value="train">train</option>
+      <option value="val">val</option>
+      <option value="test">test</option>
+    </select>
+    <button class="btn btn-primary" type="submit">Upload to dataset</button>
+  </form>
+  <p class="hint">Retrain from terminal: <code>python training/train.py --epochs 50</code></p>
+  {% if dataset_images %}
+  <ul class="plain-list compact">
+    {% for d in dataset_images[:15] %}
+    <li>{{ d.filename }} · {{ d.class_name }} · {{ d.split }} · {{ d.uploaded_at }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endblock %}

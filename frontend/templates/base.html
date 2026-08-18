@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}WasteSort AI{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"></canvas>
+  <div class="bg-mesh" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+  </div>
+  <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark" aria-hidden="true"></span>
+      WasteSort <span>AI</span>
+    </a>
+    <nav>
+      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Detect</a>
+      <a href="{{ url_for('history') }}" class="{% if request.endpoint in ['history', 'history_detail'] %}active{% endif %}">History</a>
+      <a href="{{ url_for('admin_login') }}" class="{% if request.endpoint and 'admin' in request.endpoint %}active{% endif %}">Admin</a>
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-wrap">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}" data-auto-dismiss>{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main class="container page-enter">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>College project · YOLO + Flask · Plastic · Paper · Glass · Metal</p>
+  </footer>
+
+  <div id="loading-overlay" class="loading-overlay" hidden aria-live="polite">
+    <div class="loader-card">
+      <div class="scan-visual" aria-hidden="true">
+        <div class="scan-ring"></div>
+        <div class="scan-beam"></div>
+      </div>
+      <h3>Detecting waste…</h3>
+      <p id="loader-status">Preprocessing image</p>
+      <div class="loader-bar"><span id="loader-bar-fill"></span></div>
+      <div class="loader-steps">
+        <span class="loader-step active">Image</span>
+        <span class="loader-step">YOLO</span>
+        <span class="loader-step">Guide</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

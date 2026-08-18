@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Detection Result — WasteSort AI{% endblock %}
+{% block content %}
+<section class="panel reveal">
+  <div class="section-head">
+    <h2>Result</h2>
+    <a class="text-link" href="{{ url_for('index') }}">New detection</a>
+  </div>
+
+  <div class="mode-banner mode-{{ result.model_mode }}">
+    <strong>Model mode:</strong> {{ result.model_mode }}
+    <span>{{ result.model_note }}</span>
+  </div>
+
+  <div class="result-grid">
+    <figure class="media-card reveal delay-1">
+      <figcaption>Uploaded image</figcaption>
+      <img src="{{ url_for('static', filename=upload_url) }}" alt="Uploaded waste" />
+    </figure>
+    <figure class="media-card reveal delay-2">
+      <figcaption>YOLO output (bounding boxes)</figcaption>
+      {% if result.result_image %}
+      <img class="result-scan" src="{{ url_for('static', filename=result.result_image) }}" alt="Detection result" />
+      {% else %}
+      <p class="empty">No annotated image.</p>
+      {% endif %}
+    </figure>
+  </div>
+</section>
+
+<section class="panel reveal delay-2">
+  <h2>Detected Waste</h2>
+  {% if result.detections %}
+  <div class="detection-cards">
+    {% for d in result.detections %}
+    <article class="det-card stagger" style="--i: {{ loop.index0 }}" data-class="{{ d.class_name }}">
+      <div class="det-card-top">
+        <strong>{{ d.class_name|title }}</strong>
+        <span class="conf-value" data-target="{{ d.confidence_pct }}">0%</span>
+      </div>
+      {% if result.model_mode == 'demo_coco' %}
+      <small class="mapped">mapped from {{ d.raw_label }}</small>
+      {% endif %}
+      <div class="conf-bar" aria-hidden="true">
+        <span class="conf-fill" data-width="{{ d.confidence_pct }}"></span>
+      </div>
+      <p class="det-meta">{{ d.category }}</p>
+      <code class="bbox">{{ d.bbox.x1 }},{{ d.bbox.y1 }} → {{ d.bbox.x2 }},{{ d.bbox.y2 }}</code>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">
+    No waste objects detected above the confidence threshold.
+    {% if result.model_mode == 'demo_coco' %}
+    Demo mode only maps certain COCO objects (bottle, book, wine glass, etc.).
+    Train a custom model for real waste photos.
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
+
+<section class="panel guidance reveal delay-3">
+  <h2>Recycling Guidance</h2>
+  {% if result.detections %}
+    {% set top = result.detections[0] %}
+    <div class="guidance-card" data-class="{{ top.class_name }}">
+      <p class="category">{{ top.category }}</p>
+      <p>{{ top.recommendation }}</p>
+      {% if top.disposal_tips %}
+      <p class="tips"><strong>Tips:</strong> {{ top.disposal_tips }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <p>No recommendation — nothing was classified.</p>
+  {% endif %}
+  <p class="saved">Saved to history as record #{{ detection_id }}.</p>
+</section>
+{% endblock %}

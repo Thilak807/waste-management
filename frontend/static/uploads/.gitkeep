@@ -1,0 +1,3 @@
+# Keep uploaded/result images out of git; folders stay via .gitkeep
+*
+!.gitkeep

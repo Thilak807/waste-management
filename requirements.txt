@@ -1,0 +1,16 @@
+# Waste Detection, Classification and Recycling System
+# Python 3.8+ recommended (3.10 ideal). Python 3.7 may work with older package builds.
+
+flask>=2.2.0
+ultralytics>=8.0.145
+opencv-python>=4.6.0
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.5.0
+seaborn>=0.12.0
+scikit-learn>=1.0.0
+Pillow>=9.0.0
+torch>=1.13.0
+torchvision>=0.14.0
+PyYAML>=6.0
+Werkzeug>=2.2.0

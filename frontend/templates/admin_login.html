@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — WasteSort AI{% endblock %}
+{% block content %}
+<section class="panel narrow">
+  <h2>Admin Login</h2>
+  <p class="hint">Default for demo: admin / admin123 (change in config.py).</p>
+  <form method="post" class="stack-form">
+    <label>Username
+      <input type="text" name="username" required autocomplete="username" />
+    </label>
+    <label>Password
+      <input type="password" name="password" required autocomplete="current-password" />
+    </label>
+    <button class="btn btn-primary" type="submit">Log in</button>
+  </form>
+</section>
+{% endblock %}

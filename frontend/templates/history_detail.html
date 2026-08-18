@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Record #{{ record.id }} — WasteSort AI{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="section-head">
+    <h2>Record #{{ record.id }}</h2>
+    <a href="{{ url_for('history') }}">All history</a>
+  </div>
+  <p class="meta">{{ record.created_at }} · mode: {{ record.model_mode }}</p>
+  <div class="result-grid">
+    <figure>
+      <figcaption>Original</figcaption>
+      <img src="{{ url_for('static', filename=record.original_image) }}" alt="" />
+    </figure>
+    <figure>
+      <figcaption>Result</figcaption>
+      {% if record.result_image %}
+      <img src="{{ url_for('static', filename=record.result_image) }}" alt="" />
+      {% endif %}
+    </figure>
+  </div>
+  <h3>Detections</h3>
+  <ul class="plain-list">
+    {% for d in record.detections %}
+    <li><strong>{{ d.class_name|title }}</strong> — {{ d.confidence_pct }}%</li>
+    {% else %}
+    <li>None</li>
+    {% endfor %}
+  </ul>
+  <h3>Recycling recommendation</h3>
+  <p>{{ record.recommendation or '—' }}</p>
+</section>
+{% endblock %}
