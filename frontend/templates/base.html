@@ -3,11 +3,159 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}WasteSort AI{% endblock %}</title>
+  <title>{% block title %}RecycleMe - Waste Detection{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <style>
+    .topbar-new {
+      background: rgba(7, 22, 15, 0.82) !important;
+      backdrop-filter: blur(18px) saturate(180%);
+      -webkit-backdrop-filter: blur(18px) saturate(180%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    .topbar-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand-new {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-family: var(--display);
+      font-weight: 700;
+      color: #ffffff !important;
+      font-size: 1.45rem;
+      transition: all 0.3s var(--ease);
+    }
+
+    .brand-new:hover {
+      color: var(--leaf) !important;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 12px;
+      font-size: 1.35rem;
+      color: white;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar-nav a {
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.25s var(--ease);
+      position: relative;
+      padding: 6px 2px;
+    }
+
+    .topbar-nav a:hover {
+      color: var(--leaf-light);
+    }
+
+    .topbar-nav a.active {
+      color: var(--leaf);
+      font-weight: 700;
+    }
+
+    .topbar-nav a.active::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 0;
+      right: 0;
+      height: 2.5px;
+      background: var(--leaf);
+      border-radius: 2px;
+      box-shadow: 0 0 10px var(--leaf);
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .user-label {
+      font-size: 0.9rem;
+      color: var(--muted-light);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-label strong {
+      color: var(--leaf);
+      font-weight: 600;
+    }
+
+    .logout-btn {
+      padding: 8px 18px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s var(--ease);
+      font-family: var(--font);
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .logout-btn:hover {
+      background: linear-gradient(135deg, var(--leaf-deep) 0%, #15803d 100%);
+      border-color: transparent;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
+    }
+
+    @media (max-width: 768px) {
+      .topbar-nav {
+        gap: 15px;
+      }
+      .topbar-nav a {
+        font-size: 0.85rem;
+      }
+      .user-label {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
   <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"></canvas>
@@ -18,16 +166,41 @@
   </div>
   <div class="cursor-glow" id="cursor-glow" aria-hidden="true"></div>
 
-  <header class="topbar">
-    <a class="brand" href="{{ url_for('index') }}">
-      <span class="brand-mark" aria-hidden="true"></span>
-      WasteSort <span>AI</span>
-    </a>
-    <nav>
-      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Detect</a>
-      <a href="{{ url_for('history') }}" class="{% if request.endpoint in ['history', 'history_detail'] %}active{% endif %}">History</a>
-      <a href="{{ url_for('admin_login') }}" class="{% if request.endpoint and 'admin' in request.endpoint %}active{% endif %}">Admin</a>
-    </nav>
+  <header class="topbar-new">
+    <div class="topbar-content">
+      <a class="brand-new" href="{{ url_for('index') }}">
+        <span class="brand-icon">♻️</span>
+        <span>RecycleMe</span>
+      </a>
+      <nav>
+        <ul class="topbar-nav">
+          <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a></li>
+          <li><a href="{{ url_for('live_detection') }}" class="{% if request.endpoint == 'live_detection' %}active{% endif %}" style="color:#f87171;font-weight:700;">🔴 Live</a></li>
+          <li><a href="{{ url_for('history') }}" class="{% if request.endpoint in ['history', 'history_detail'] %}active{% endif %}">History</a></li>
+          <li><a href="{{ url_for('bin_locations') }}" class="{% if request.endpoint == 'bin_locations' %}active{% endif %}">🗑️ Bins</a></li>
+          <li>
+            <a
+              href="{% if session.get('admin') %}{{ url_for('admin_dashboard') }}{% else %}{{ url_for('admin_login') }}{% endif %}"
+              class="{% if request.endpoint and 'admin' in request.endpoint %}active{% endif %}"
+            >Admin</a>
+          </li>
+        </ul>
+      </nav>
+      <div class="user-menu">
+        {% if session.get('admin') or session.get('user') %}
+          <span class="user-label">
+            <span>{{ session.get('username') or 'User' }}</span>
+          </span>
+          {% if session.get('admin') %}
+            <a href="{{ url_for('admin_logout') }}" class="logout-btn">Logout</a>
+          {% elif session.get('user') %}
+            <a href="{{ url_for('user_logout') }}" class="logout-btn">Logout</a>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('login') }}" class="logout-btn">Login</a>
+        {% endif %}
+      </div>
+    </div>
   </header>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -45,7 +218,7 @@
   </main>
 
   <footer class="site-footer">
-    <p>College project · YOLO + Flask · Plastic · Paper · Glass · Metal</p>
+    <p>RecycleMe · AI-Powered Waste Detection · Plastic · Paper · Glass · Metal</p>
   </footer>
 
   <div id="loading-overlay" class="loading-overlay" hidden aria-live="polite">

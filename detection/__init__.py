@@ -75,63 +75,137 @@ def detect_waste(
     recommendations_map: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """
-    Run full detection pipeline on one image.
-
-    Returns a dict with detections, annotated image path, model mode, etc.
+    Run full multi-object detection pipeline on an image.
+    Detects and classifies all waste objects in a single scene.
     """
-    conf = conf if conf is not None else config.CONFIDENCE_THRESHOLD
-    iou = iou if iou is not None else config.IOU_THRESHOLD
+    conf_th = conf if conf is not None else config.CONFIDENCE_THRESHOLD
+    iou_th = iou if iou is not None else config.IOU_THRESHOLD
 
     image_path = Path(image_path)
-    # Preprocess (denoise); Ultralytics handles letterbox internally
-    original, _letterboxed = preprocess_for_yolo(image_path, size=config.IMG_SIZE, denoise=True)
+    original, _ = preprocess_for_yolo(image_path, size=config.IMG_SIZE, denoise=True)
+    h, w = original.shape[:2]
 
     model, mode = get_model()
-    results = model.predict(
-        source=original,
-        conf=conf,
-        iou=iou,  # NMS IoU threshold
-        imgsz=config.IMG_SIZE,
-        verbose=False,
-    )
-
     detections: List[Dict[str, Any]] = []
     annotated = original.copy()
 
-    if results and len(results) > 0:
-        r0 = results[0]
-        names = r0.names  # id -> name
-        boxes = r0.boxes
-        if boxes is not None and len(boxes) > 0:
-            for box in boxes:
+    if mode == "custom":
+        # Direct inference using the custom-trained YOLO model
+        results = model.predict(
+            source=original,
+            conf=conf_th,
+            iou=iou_th,
+            imgsz=config.IMG_SIZE,
+            verbose=False,
+        )
+        if results and len(results) > 0:
+            r0 = results[0]
+            for box in r0.boxes:
                 cls_id = int(box.cls.item())
                 score = float(box.conf.item())
-                xyxy = box.xyxy.cpu().numpy().astype(int).tolist()[0]
-                raw_name = names.get(cls_id, str(cls_id))
+                box_xyxy = [int(v) for v in box.xyxy[0].cpu().numpy()]
+                raw_name = r0.names.get(cls_id, str(cls_id)).lower()
 
-                if mode == "custom":
-                    waste_class = raw_name.lower()
-                else:
-                    waste_class = _map_demo_class(raw_name)
-                    if waste_class is None:
-                        continue  # skip non-waste-mapped COCO classes
+                bw = box_xyxy[2] - box_xyxy[0]
+                bh = box_xyxy[3] - box_xyxy[1]
+                if bw * bh > (w * h * 0.95) or bw < 10 or bh < 10:
+                    continue
 
+                # Map class name (e.g. Trash -> other, or direct name)
+                waste_class = "other" if raw_name in ["trash", "other"] else raw_name
                 rec = get_recommendation(waste_class, recommendations_map)
+                bin_info = config.BIN_LOCATIONS.get(waste_class, config.BIN_LOCATIONS.get("other", {}))
+
                 det = {
                     "class_name": waste_class,
                     "raw_label": raw_name,
                     "confidence": round(score, 4),
                     "confidence_pct": round(score * 100, 1),
-                    "bbox": {"x1": xyxy[0], "y1": xyxy[1], "x2": xyxy[2], "y2": xyxy[3]},
+                    "bbox": {"x1": box_xyxy[0], "y1": box_xyxy[1], "x2": box_xyxy[2], "y2": box_xyxy[3]},
                     "category": rec["category"],
                     "recommendation": rec["recommendation"],
                     "disposal_tips": rec["disposal_tips"],
+                    "bin_type": bin_info.get("bin_type", "General Waste Bin"),
+                    "bin_location": bin_info.get("location", "Main Gate"),
+                    "bin_facility": bin_info.get("facility_name", ""),
+                    "bin_lat": bin_info.get("lat"),
+                    "bin_lng": bin_info.get("lng"),
+                    "bin_color": bin_info.get("color", "#34d399"),
+                    "bin_icon": bin_info.get("icon", "🗑️"),
+                }
+                detections.append(det)
+                _draw_box(annotated, det)
+
+    else:
+        # Demo mode using pretrained COCO model
+        results = model.predict(
+            source=original,
+            conf=conf_th,
+            iou=iou_th,
+            imgsz=config.IMG_SIZE,
+            verbose=False,
+        )
+        if results and len(results) > 0:
+            r0 = results[0]
+            for box in r0.boxes:
+                cls_id = int(box.cls.item())
+                score = float(box.conf.item())
+                box_xyxy = [int(v) for v in box.xyxy[0].cpu().numpy()]
+                raw_name = r0.names.get(cls_id, str(cls_id)).lower()
+
+                mapped_class = config.DEMO_COCO_TO_WASTE.get(raw_name)
+                if not mapped_class:
+                    continue
+
+                bw = box_xyxy[2] - box_xyxy[0]
+                bh = box_xyxy[3] - box_xyxy[1]
+                if bw * bh > (w * h * 0.90) or bw < 15 or bh < 15:
+                    continue
+
+                rec = get_recommendation(mapped_class, recommendations_map)
+                bin_info = config.BIN_LOCATIONS.get(mapped_class, config.BIN_LOCATIONS.get("other", {}))
+
+                det = {
+                    "class_name": mapped_class,
+                    "raw_label": raw_name,
+                    "confidence": round(score, 4),
+                    "confidence_pct": round(score * 100, 1),
+                    "bbox": {"x1": box_xyxy[0], "y1": box_xyxy[1], "x2": box_xyxy[2], "y2": box_xyxy[3]},
+                    "category": rec["category"],
+                    "recommendation": rec["recommendation"],
+                    "disposal_tips": rec["disposal_tips"],
+                    "bin_type": bin_info.get("bin_type", "General Waste Bin"),
+                    "bin_location": bin_info.get("location", "Main Gate"),
+                    "bin_facility": bin_info.get("facility_name", ""),
+                    "bin_lat": bin_info.get("lat"),
+                    "bin_lng": bin_info.get("lng"),
+                    "bin_color": bin_info.get("color", "#34d399"),
+                    "bin_icon": bin_info.get("icon", "🗑️"),
                 }
                 detections.append(det)
                 _draw_box(annotated, det)
 
     # Sort by confidence descending
     detections.sort(key=lambda d: d["confidence"], reverse=True)
+
+    # Compute Multi-Waste Summary
+    category_counts: Dict[str, int] = {}
+    unique_bins: Dict[str, Dict[str, Any]] = {}
+    for d in detections:
+        cls = d["class_name"]
+        category_counts[cls] = category_counts.get(cls, 0) + 1
+        if cls not in unique_bins:
+            b_info = config.BIN_LOCATIONS.get(cls, config.BIN_LOCATIONS.get("other", {}))
+            unique_bins[cls] = {
+                "category": cls,
+                "bin_type": b_info.get("bin_type", "General Bin"),
+                "location": b_info.get("location", "Campus Center"),
+                "facility_name": b_info.get("facility_name", ""),
+                "color": b_info.get("color", "#34d399"),
+                "icon": b_info.get("icon", "🗑️"),
+                "lat": b_info.get("lat"),
+                "lng": b_info.get("lng"),
+            }
 
     result_path = None
     if save_result:
@@ -153,6 +227,9 @@ def detect_waste(
         "result_image": result_rel,
         "detections": detections,
         "count": len(detections),
+        "category_counts": category_counts,
+        "unique_categories": list(category_counts.keys()),
+        "unique_bins": list(unique_bins.values()),
         "primary_class": primary["class_name"] if primary else None,
         "primary_confidence": primary["confidence"] if primary else None,
         "primary_recommendation": primary["recommendation"] if primary else None,
@@ -162,26 +239,30 @@ def detect_waste(
 def _draw_box(image: np.ndarray, det: Dict[str, Any]) -> None:
     """Draw bounding box + label on BGR image."""
     colors = {
-        "plastic": (40, 120, 255),
-        "paper": (60, 180, 80),
-        "glass": (220, 160, 40),
-        "metal": (180, 80, 200),
+        "plastic": (248, 189, 56),    # Sky Blue
+        "paper": (128, 222, 74),      # Green
+        "cardboard": (60, 146, 251),  # Orange
+        "glass": (21, 204, 250),      # Yellow
+        "metal": (252, 132, 192),     # Purple
+        "organic": (153, 211, 52),    # Emerald
+        "other": (249, 121, 232),     # Pink
+        "trash": (249, 121, 232),
     }
     b = det["bbox"]
     color = colors.get(det["class_name"], (0, 220, 255))
     x1, y1, x2, y2 = b["x1"], b["y1"], b["x2"], b["y2"]
-    cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+    cv2.rectangle(image, (x1, y1), (x2, y2), color, 3)
 
-    label = f"{det['class_name'].title()} {det['confidence_pct']:.1f}%"
-    (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 2)
-    cv2.rectangle(image, (x1, max(0, y1 - th - 8)), (x1 + tw + 4, y1), color, -1)
+    label = f"{det['class_name'].upper()} {det['confidence_pct']:.0f}%"
+    (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.58, 2)
+    cv2.rectangle(image, (x1, max(0, y1 - th - 10)), (x1 + tw + 8, y1), color, -1)
     cv2.putText(
         image,
         label,
-        (x1 + 2, y1 - 4),
+        (x1 + 4, max(th + 2, y1 - 4)),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.55,
-        (255, 255, 255),
+        0.58,
+        (10, 25, 15),
         2,
         cv2.LINE_AA,
     )

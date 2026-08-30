@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+{% block title %}Waste Recycling & Bin Centers Map — RecycleMe{% endblock %}
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+  .bl-page { padding: 24px 0 70px; }
+
+  .bl-header { text-align: center; margin-bottom: 30px; }
+  .bl-header h1 {
+    font-family: var(--display); font-size: 2.6rem;
+    color: #ffffff; margin: 0 0 10px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  .bl-header p { color: var(--muted-light); font-size: 1.05rem; margin: 0; max-width: 650px; margin: 0 auto; }
+
+  /* ── Interactive Map Section ─────────────────────────────────── */
+  .map-section {
+    background: rgba(12, 33, 23, 0.78);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    margin-bottom: 40px;
+  }
+
+  .map-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-pill {
+    padding: 8px 16px;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted-light);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-pill:hover, .filter-pill.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border-color: #34d399;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-locate-me {
+    padding: 9px 18px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    color: #ffffff;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+  }
+
+  .btn-locate-me:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(56, 189, 248, 0.45);
+  }
+
+  #campus-map {
+    width: 100%;
+    height: 480px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    z-index: 1;
+  }
+
+  /* Custom Leaflet Map Controls & Popups */
+  .leaflet-popup-content-wrapper {
+    background: rgba(10, 28, 19, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 18px !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6) !important;
+    padding: 4px !important;
+  }
+  .leaflet-popup-tip {
+    background: rgba(10, 28, 19, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  }
+  .leaflet-popup-content {
+    margin: 12px 14px !important;
+    line-height: 1.4 !important;
+  }
+
+  .popup-card {
+    min-width: 220px;
+    max-width: 280px;
+  }
+  .popup-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .popup-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+  }
+  .popup-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+  }
+  .popup-category {
+    font-size: 0.78rem;
+    color: var(--muted-light);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .popup-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--muted-light);
+    margin-bottom: 12px;
+  }
+  .popup-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .popup-row strong {
+    color: #ffffff;
+  }
+  .popup-btn {
+    display: block;
+    text-align: center;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white !important;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .popup-btn:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+  }
+
+  /* Custom glowing map markers */
+  .custom-pin {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border: 2.5px solid #ffffff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 16px var(--pin-glow);
+    cursor: pointer;
+    transition: transform 0.25s ease;
+  }
+  .custom-pin:hover {
+    transform: scale(1.25);
+    z-index: 1000 !important;
+  }
+
+  .user-location-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #38bdf8;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 20px #38bdf8;
+    animation: userPulse 1.8s infinite;
+  }
+  @keyframes userPulse {
+    0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+    70% { box-shadow: 0 0 0 16px rgba(56, 189, 248, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+  }
+
+  /* ── Bin Cards Grid ─────────────────────────────────────────── */
+  .bl-grid-header {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bl-grid-header h2 {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .bl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .bl-card {
+    background: rgba(12, 33, 23, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 22px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.35);
+    overflow: hidden;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    cursor: pointer;
+  }
+  .bl-card:hover, .bl-card.highlighted {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 50px rgba(0,0,0,.55);
+    border-color: var(--card-accent, #34d399);
+  }
+
+  .bl-card-top {
+    height: 8px;
+    background: var(--card-accent, #34d399);
+  }
+
+  .bl-card-body { padding: 24px; }
+
+  .bl-card-header-flex {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .bl-icon {
+    width: 52px; height: 52px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--card-bg-icon, rgba(255,255,255,0.08));
+    flex-shrink: 0;
+  }
+
+  .bl-card h3 {
+    font-size: 1.2rem; font-weight: 700; color: #ffffff; margin: 0 0 2px;
+  }
+  .bl-card .facility-name {
+    font-size: 0.85rem; color: var(--muted-light); font-weight: 500; margin: 0;
+  }
+
+  .bl-info { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .bl-info-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 0.88rem; color: var(--muted-light);
+  }
+  .bl-info-row .bi-icon { flex-shrink: 0; font-size: 1.05rem; }
+  .bl-info-row .bi-text strong { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; margin-bottom: 1px; }
+
+  .bl-card-footer {
+    display: flex;
+    gap: 10px;
+  }
+
+  .bl-view-btn {
+    flex: 1; text-align: center; padding: 10px 14px;
+    border-radius: 10px; font-size: .88rem; font-weight: 700;
+    color: white; text-decoration: none; transition: all .2s;
+    cursor: pointer; border: none; font-family: var(--font);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+  .bl-view-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(16,185,129,.4); }
+
+  .bl-direct-btn {
+    padding: 10px 14px;
+    border-radius: 10px; font-size: .88rem; font-weight: 600;
+    color: var(--muted-light); background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    text-decoration: none; cursor: pointer; transition: all .2s;
+  }
+  .bl-direct-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+  }
+
+  @media (max-width: 768px) {
+    .bl-header h1 { font-size: 2rem; }
+    #campus-map { height: 360px; }
+    .map-toolbar { flex-direction: column; align-items: stretch; }
+    .bl-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="bl-page">
+  <div class="bl-header">
+    <h1>🗺️ Waste Recycling & Bin Centers</h1>
+    <p>Locate specialized bins, campus recycling hubs, and disposal facilities in real-time.</p>
+  </div>
+
+  <!-- ── Interactive Map Section ────────────────────────────── -->
+  <section class="map-section">
+    <div class="map-toolbar">
+      <div class="filter-pills" id="filter-pills">
+        <button class="filter-pill active" data-filter="all">🌐 All Centers</button>
+        <button class="filter-pill" data-filter="plastic">🧴 Plastic</button>
+        <button class="filter-pill" data-filter="paper">📄 Paper</button>
+        <button class="filter-pill" data-filter="cardboard">📦 Cardboard</button>
+        <button class="filter-pill" data-filter="glass">🍶 Glass</button>
+        <button class="filter-pill" data-filter="metal">🔩 Metal</button>
+        <button class="filter-pill" data-filter="organic">🌿 Organic</button>
+        <button class="filter-pill" data-filter="other">🗑️ General</button>
+      </div>
+
+      <button class="btn-locate-me" id="btn-locate-me" onclick="locateUser()">
+        📍 Find Nearest Bin to Me
+      </button>
+    </div>
+
+    <div id="campus-map"></div>
+  </section>
+
+  <!-- ── Bin Cards Grid ─────────────────────────────────────── -->
+  <section>
+    <div class="bl-grid-header">
+      <h2>All Facility Centers</h2>
+      <span style="color:var(--muted);font-size:0.9rem;">Click any center to focus on map</span>
+    </div>
+
+    <div class="bl-grid" id="bins-grid">
+      {% for key, bin in bin_locations.items() %}
+      {% if key != 'trash' %}
+      <div class="bl-card" 
+           id="card-{{ key }}"
+           data-category="{{ bin.category or key }}"
+           data-lat="{{ bin.lat or 12.9716 }}"
+           data-lng="{{ bin.lng or 77.5946 }}"
+           style="--card-accent: {{ bin.color or '#34d399' }}; --card-bg-icon: {{ bin.color }}22;"
+           onclick="focusBin('{{ key }}')">
+        <div class="bl-card-top"></div>
+        <div class="bl-card-body">
+          <div class="bl-card-header-flex">
+            <div class="bl-icon">{{ bin.icon or '🗑️' }}</div>
+            <div>
+              <h3>{{ bin.bin_type }}</h3>
+              <p class="facility-name">{{ bin.facility_name or bin.location }}</p>
+            </div>
+          </div>
+
+          <div class="bl-info">
+            <div class="bl-info-row">
+              <span class="bi-icon">📍</span>
+              <div class="bi-text">
+                <strong>Location & Building</strong>
+                {{ bin.floor_building or bin.location }}
+              </div>
+            </div>
+
+            {% if bin.accepted_items %}
+            <div class="bl-info-row">
+              <span class="bi-icon">♻️</span>
+              <div class="bi-text">
+                <strong>Accepted Items</strong>
+                {{ bin.accepted_items }}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if bin.operating_hours %}
+            <div class="bl-info-row">
+              <span class="bi-icon">🕒</span>
+              <div class="bi-text">
+                <strong>Hours</strong>
+                {{ bin.operating_hours }}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="bl-card-footer">
+            <button class="bl-view-btn" onclick="event.stopPropagation(); focusBin('{{ key }}')">
+              🎯 View on Map
+            </button>
+            <a class="bl-direct-btn" 
+               href="https://www.google.com/maps/search/?api=1&query={{ bin.lat or 12.9716 }},{{ bin.lng or 77.5946 }}" 
+               target="_blank" 
+               onclick="event.stopPropagation();">
+              Directions ↗
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<script>
+(function() {
+  const defaultCenter = [12.9716, 77.5946];
+  let map;
+  let markers = {};
+  let userMarker = null;
+
+  // Bin Data from Server
+  const binsData = {{ bin_locations | tojson }};
+
+  // Initialize Map
+  function initMap() {
+    map = L.map('campus-map', {
+      zoomControl: true,
+      scrollWheelZoom: true
+    }).setView(defaultCenter, 17);
+
+    // Dark-mode CartoDB / OSM tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 19,
+      subdomains: 'abcd'
+    }).addTo(map);
+
+    // Plot all markers
+    Object.keys(binsData).forEach(key => {
+      if (key === 'trash') return;
+      const bin = binsData[key];
+      const lat = bin.lat || defaultCenter[0];
+      const lng = bin.lng || defaultCenter[1];
+      const color = bin.color || '#34d399';
+      const iconEmoji = bin.icon || '🗑️';
+
+      const customIcon = L.divIcon({
+        className: 'custom-map-icon',
+        html: `<div class="custom-pin" style="background:${color}; --pin-glow:${color};">${iconEmoji}</div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -20]
+      });
+
+      const popupHtml = `
+        <div class="popup-card">
+          <div class="popup-header">
+            <div class="popup-icon" style="background:${color}25; color:${color};">${iconEmoji}</div>
+            <div>
+              <h4 class="popup-title">${bin.bin_type}</h4>
+              <span class="popup-category">${key.toUpperCase()} RECYCLING</span>
+            </div>
+          </div>
+          <div class="popup-body">
+            <div class="popup-row">
+              <span>📍 <strong>${bin.location}</strong></span>
+            </div>
+            ${bin.floor_building ? `<div class="popup-row"><span>🏢 ${bin.floor_building}</span></div>` : ''}
+            ${bin.accepted_items ? `<div class="popup-row"><span>♻️ ${bin.accepted_items}</span></div>` : ''}
+            ${bin.operating_hours ? `<div class="popup-row"><span>🕒 ${bin.operating_hours}</span></div>` : ''}
+          </div>
+          <a class="popup-btn" href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank">
+            🗺️ Open Navigation ↗
+          </a>
+        </div>
+      `;
+
+      const marker = L.marker([lat, lng], { icon: customIcon })
+        .addTo(map)
+        .bindPopup(popupHtml);
+
+      markers[key] = marker;
+    });
+
+    // Check URL parameters for focused bin
+    const urlParams = new URLSearchParams(window.location.search);
+    const focusTarget = urlParams.get('focus');
+    if (focusTarget && markers[focusTarget]) {
+      setTimeout(() => focusBin(focusTarget), 500);
+    }
+  }
+
+  // Focus a specific bin
+  window.focusBin = function(key) {
+    const marker = markers[key];
+    const bin = binsData[key];
+    if (marker && bin) {
+      const lat = bin.lat || defaultCenter[0];
+      const lng = bin.lng || defaultCenter[1];
+      map.flyTo([lat, lng], 18, { animate: true, duration: 1.2 });
+      marker.openPopup();
+
+      // Highlight card in grid
+      document.querySelectorAll('.bl-card').forEach(c => c.classList.remove('highlighted'));
+      const card = document.getElementById('card-' + key);
+      if (card) {
+        card.classList.add('highlighted');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  };
+
+  // Filter Pins by Category
+  const filterPills = document.querySelectorAll('.filter-pill');
+  filterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      filterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+
+      const filter = pill.getAttribute('data-filter');
+      const cards = document.querySelectorAll('.bl-card');
+
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-category');
+        if (filter === 'all' || cat === filter) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      // Filter Map Markers
+      Object.keys(markers).forEach(k => {
+        const bin = binsData[k];
+        const cat = bin.category || k;
+        if (filter === 'all' || cat === filter) {
+          map.addLayer(markers[k]);
+        } else {
+          map.removeLayer(markers[k]);
+        }
+      });
+    });
+  });
+
+  // Locate User & Find Nearest Bin
+  window.locateUser = function() {
+    const btn = document.getElementById('btn-locate-me');
+    btn.textContent = '🔄 Locating you…';
+
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      btn.textContent = '📍 Find Nearest Bin to Me';
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const uLat = pos.coords.latitude;
+        const uLng = pos.coords.longitude;
+
+        if (userMarker) map.removeLayer(userMarker);
+
+        const userIcon = L.divIcon({
+          className: 'user-pin-wrap',
+          html: `<div class="user-location-pin" title="You are here"></div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+
+        userMarker = L.marker([uLat, uLng], { icon: userIcon })
+          .addTo(map)
+          .bindPopup('<b>📍 You Are Here</b>')
+          .openPopup();
+
+        // Calculate nearest bin
+        let nearestKey = null;
+        let minDistance = Infinity;
+
+        Object.keys(binsData).forEach(key => {
+          if (key === 'trash') return;
+          const b = binsData[key];
+          const dist = Math.hypot((b.lat || defaultCenter[0]) - uLat, (b.lng || defaultCenter[1]) - uLng);
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestKey = key;
+          }
+        });
+
+        btn.textContent = '✅ Nearest Bin Found!';
+        setTimeout(() => btn.textContent = '📍 Find Nearest Bin to Me', 3000);
+
+        if (nearestKey) {
+          focusBin(nearestKey);
+        } else {
+          map.flyTo([uLat, uLng], 17);
+        }
+      },
+      (err) => {
+        console.warn('Geolocation error:', err);
+        alert('Could not retrieve your location. Showing default campus map.');
+        btn.textContent = '📍 Find Nearest Bin to Me';
+      }
+    );
+  };
+
+  // Run on load
+  document.addEventListener('DOMContentLoaded', initMap);
+})();
+</script>
+{% endblock %}

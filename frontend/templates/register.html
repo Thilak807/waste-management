@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Create Account — RecycleMe{% endblock %}
+{% block content %}
+<style>
+  .reg-section {
+    max-width: 480px; margin: 40px auto 80px;
+    animation: fadeUp .7s cubic-bezier(.4,0,.2,1) both;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+
+  .reg-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--leaf); text-decoration: none; font-size: .92rem;
+    font-weight: 600; margin-bottom: 24px; transition: color .2s;
+  }
+  .reg-back:hover { color: var(--leaf-light); }
+
+  .reg-card {
+    background: rgba(12, 33, 23, 0.78);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    padding: 38px 36px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+
+  .reg-card-head { text-align: center; margin-bottom: 30px; }
+  .reg-card-head .head-icon {
+    width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: flex; align-items: center; justify-content: center; font-size: 2rem;
+    color: white; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    animation: pop .6s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes pop { from{opacity:0;transform:scale(.6)} to{opacity:1;transform:scale(1)} }
+  .reg-card-head h1 {
+    font-family: var(--display); font-size: 2rem;
+    color: #ffffff; margin-bottom: 6px; font-weight: 700;
+  }
+  .reg-card-head p { color: var(--muted-light); font-size: .92rem; }
+
+  .form-group { margin-bottom: 20px; }
+  .form-group label {
+    display: block; font-weight: 600; font-size: .9rem;
+    color: #ffffff; margin-bottom: 8px;
+  }
+  .form-group input {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px;
+    font-size: .95rem; font-family: var(--font); color: #ffffff;
+    background: rgba(255, 255, 255, 0.06); transition: all .2s;
+  }
+  .form-group input:focus {
+    outline: none; border-color: var(--leaf);
+    background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 3px rgba(46,229,157,.25);
+  }
+  .form-group input::placeholder { color: var(--muted); }
+
+  .input-hint { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+  .reg-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 700; font-family: var(--font);
+    cursor: pointer; margin-top: 10px; transition: all .25s;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+  }
+  .reg-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5); }
+  .reg-btn:active { transform: translateY(0); }
+
+  .reg-footer {
+    text-align: center; margin-top: 24px; padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: .92rem; color: var(--muted);
+  }
+  .reg-footer a { color: var(--leaf); font-weight: 700; text-decoration: none; }
+  .reg-footer a:hover { text-decoration: underline; color: var(--leaf-light); }
+
+  .strength-bar {
+    height: 5px; background: rgba(255, 255, 255, 0.1); border-radius: 3px;
+    margin-top: 8px; overflow: hidden;
+  }
+  .strength-fill { height: 100%; width: 0%; transition: width .3s, background .3s; border-radius: 3px; }
+</style>
+
+<div class="reg-section">
+  <a href="{{ url_for('login') }}" class="reg-back">← Back to home</a>
+
+  <div class="reg-card">
+    <div class="reg-card-head">
+      <div class="head-icon">♻️</div>
+      <h1>Create Account</h1>
+      <p>Join RecycleMe and start detecting waste with AI</p>
+    </div>
+
+    <form method="post" id="reg-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"
+               required autocomplete="username"
+               placeholder="e.g. john_doe" minlength="3" maxlength="30" />
+        <p class="input-hint">3–30 characters, no spaces</p>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               required autocomplete="new-password"
+               placeholder="At least 4 characters" minlength="4" oninput="checkStrength(this.value)" />
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <p class="input-hint" id="strength-label">Enter a password</p>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" name="confirm"
+               required autocomplete="new-password"
+               placeholder="Repeat your password" />
+      </div>
+
+      <button type="submit" class="reg-btn" id="reg-submit">✨ Create Account</button>
+    </form>
+
+    <div class="reg-footer">
+      Already have an account? <a href="{{ url_for('user_login') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function checkStrength(pw) {
+  const fill  = document.getElementById('strength-fill');
+  const label = document.getElementById('strength-label');
+  let score = 0;
+  if (pw.length >= 4) score++;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+  const levels = [
+    { pct: 20,  color: '#ef4444', text: 'Very weak' },
+    { pct: 40,  color: '#f97316', text: 'Weak' },
+    { pct: 60,  color: '#eab308', text: 'Fair' },
+    { pct: 80,  color: '#22c55e', text: 'Good' },
+    { pct: 100, color: '#16a34a', text: 'Strong' },
+  ];
+  const l = levels[Math.min(score, 4)];
+  fill.style.width    = l.pct + '%';
+  fill.style.background = l.color;
+  document.getElementById('strength-label').textContent = l.text;
+}
+
+document.getElementById('reg-form').addEventListener('submit', function(e) {
+  const pw  = document.getElementById('password').value;
+  const cfm = document.getElementById('confirm').value;
+  if (pw !== cfm) {
+    e.preventDefault();
+    alert('Passwords do not match!');
+    return;
+  }
+  document.getElementById('reg-submit').textContent = 'Creating…';
+  document.getElementById('reg-submit').disabled = true;
+});
+</script>
+{% endblock %}

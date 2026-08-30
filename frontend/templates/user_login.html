@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}User Login — RecycleMe{% endblock %}
+{% block content %}
+<style>
+  .login-form-section {
+    max-width: 460px;
+    margin: 40px auto 70px;
+    animation: fadeInUp 0.8s var(--ease-out) both;
+    background: rgba(12, 33, 23, 0.78);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    padding: 36px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+
+  .login-form-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .login-form-header .form-icon {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+    display: block;
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  .login-form-header h1 {
+    font-family: var(--display);
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #ffffff;
+  }
+
+  .login-form-header p {
+    color: var(--muted-light);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .form-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--leaf);
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 20px;
+    transition: all 0.3s var(--ease);
+    font-size: 0.9rem;
+  }
+
+  .form-back-link:hover {
+    transform: translateX(-4px);
+    color: var(--leaf-light);
+  }
+
+  .form-back-link::before {
+    content: '←';
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ffffff;
+    font-size: 0.9rem;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: var(--font);
+    transition: all 0.3s var(--ease);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--leaf);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(46, 229, 157, 0.25);
+  }
+
+  .form-group input::placeholder {
+    color: var(--muted);
+  }
+
+  .submit-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+    font-family: var(--font);
+    margin-top: 10px;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+  }
+
+  .submit-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5);
+  }
+
+  .submit-button:active {
+    transform: translateY(0);
+  }
+
+  .form-footer {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .form-footer a {
+    color: var(--leaf);
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.3s var(--ease);
+  }
+
+  .form-footer a:hover {
+    text-decoration: underline;
+    color: var(--leaf-light);
+  }
+
+  .demo-notice {
+    background: rgba(46, 229, 157, 0.12);
+    border: 1px solid rgba(46, 229, 157, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 24px;
+    font-size: 0.88rem;
+    color: var(--muted-light);
+  }
+
+  .demo-notice strong {
+    color: var(--leaf);
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+</style>
+
+<section class="login-form-section">
+  <a href="{{ url_for('login') }}" class="form-back-link">Back to Home</a>
+
+  <div class="login-form-header">
+    <span class="form-icon">👤</span>
+    <h1>Welcome Back</h1>
+    <p>Login to access your waste detection history</p>
+  </div>
+
+  <div class="demo-notice">
+    <strong>Demo account:</strong> Username: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">user</code>, Password: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">user123</code>
+  </div>
+
+  <form method="post" class="login-form">
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input 
+        type="text" 
+        id="username"
+        name="username" 
+        required 
+        autocomplete="username"
+        placeholder="Enter your username"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password"
+        name="password" 
+        required 
+        autocomplete="current-password"
+        placeholder="Enter your password"
+      />
+    </div>
+
+    <button type="submit" class="submit-button">Login</button>
+  </form>
+
+  <div class="form-footer">
+    No account? <a href="{{ url_for('user_register') }}">Create one now →</a>
+  </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('.login-form');
+    const button = document.querySelector('.submit-button');
+
+    form.addEventListener('submit', () => {
+      button.disabled = true;
+      button.textContent = 'Logging in...';
+    });
+  });
+</script>
+{% endblock %}

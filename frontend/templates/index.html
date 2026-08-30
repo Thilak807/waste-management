@@ -1,135 +1,422 @@
 {% extends "base.html" %}
-{% block title %}WasteSort AI — Detect Waste{% endblock %}
+{% block title %}RecycleMe — Smart Waste Management & AI Detection{% endblock %}
 {% block content %}
-<section class="hero-app">
-  <div class="hero-grid">
-    <div class="hero-copy reveal">
-      <p class="eyebrow"><span class="pulse-dot"></span> Live detection ready</p>
-      <h1 class="hero-title">
-        <span class="title-line">WasteSort</span>
-        <span class="title-accent">AI</span>
-      </h1>
-      <p class="lede">
-        Capture or upload waste, run YOLO detection, and get recycling guidance
-        for plastic, paper, glass, and metal.
-      </p>
-      <div class="class-chips" aria-label="Supported classes">
-        <button type="button" class="chip chip-plastic magnetic" data-tip="Bottles, containers, packaging">Plastic</button>
-        <button type="button" class="chip chip-paper magnetic" data-tip="Cards, newspapers, cardboard">Paper</button>
-        <button type="button" class="chip chip-glass magnetic" data-tip="Bottles and jars">Glass</button>
-        <button type="button" class="chip chip-metal magnetic" data-tip="Cans and scrap metal">Metal</button>
+<style>
+  /* ── Hero Section (Artwork + Actions) ── */
+  .hero-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    padding: 30px 0 50px;
+    min-height: 480px;
+  }
+
+  /* Left Showcase: Pedestals with Waste Items */
+  .pedestals-stage {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    gap: 15px;
+    padding: 20px 0 10px;
+    position: relative;
+  }
+
+  .pedestal-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: transform 0.35s var(--ease-spring);
+  }
+
+  .pedestal-slot:hover {
+    transform: translateY(-8px);
+  }
+
+  .pedestal-item-graphic {
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 14px 20px rgba(0,0,0,0.55));
+    animation: floatItem 4s ease-in-out infinite;
+  }
+
+  .pedestal-slot:nth-child(1) .pedestal-item-graphic { animation-delay: 0s; }
+  .pedestal-slot:nth-child(2) .pedestal-item-graphic { animation-delay: -1.3s; }
+  .pedestal-slot:nth-child(3) .pedestal-item-graphic { animation-delay: -2.6s; }
+
+  @keyframes floatItem {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .pedestal-base {
+    width: 110px;
+    height: 110px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    border-radius: 12px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 14px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .pedestal-tag {
+    background: rgba(7, 24, 16, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 5px 12px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .pedestal-slot:nth-child(1) .pedestal-tag { color: var(--plastic); border-color: rgba(56, 189, 248, 0.4); }
+  .pedestal-slot:nth-child(2) .pedestal-tag { color: var(--metal); border-color: rgba(192, 132, 252, 0.4); }
+  .pedestal-slot:nth-child(3) .pedestal-tag { color: var(--glass); border-color: rgba(250, 204, 21, 0.4); }
+
+  /* Right Side: Hero Headings & Glass Card */
+  .hero-main-info h1 {
+    font-family: var(--display);
+    font-size: clamp(2.3rem, 4vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.18;
+    color: #ffffff;
+    margin: 0 0 18px;
+    letter-spacing: -0.02em;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .hero-main-info .hero-subtext {
+    font-size: 1.05rem;
+    color: var(--muted-light);
+    line-height: 1.65;
+    margin-bottom: 28px;
+  }
+
+  /* Frosted Glass Action Card */
+  .frosted-action-card {
+    background: rgba(12, 33, 23, 0.72);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-intro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #f472b6;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .frosted-action-card .card-guide-text {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+
+  .grid-2x2-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .glass-tile-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 16px;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: all 0.28s var(--ease);
+    color: #ffffff;
+  }
+
+  .glass-tile-btn:hover {
+    background: rgba(46, 229, 157, 0.12);
+    border-color: rgba(46, 229, 157, 0.45);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35), 0 0 20px rgba(46, 229, 157, 0.18);
+  }
+
+  .tile-btn-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .tile-btn-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  @media (max-width: 900px) {
+    .hero-wrapper {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    .pedestals-stage {
+      order: 2;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .grid-2x2-btns {
+      grid-template-columns: 1fr;
+    }
+    .pedestal-base {
+      width: 90px;
+      height: 90px;
+    }
+    .pedestal-item-graphic {
+      height: 110px;
+    }
+  }
+</style>
+
+<!-- ── Hero Section ── -->
+<section class="hero-wrapper">
+  <!-- Left: Pedestals Showcase -->
+  <div class="pedestals-stage" aria-label="Recyclable items showcase">
+    <!-- Pedestal 1: Plastic -->
+    <div class="pedestal-slot">
+      <div class="pedestal-item-graphic">
+        <svg width="60" height="130" viewBox="0 0 60 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Bottle Cap -->
+          <rect x="22" y="4" width="16" height="10" rx="3" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/>
+          <rect x="24" y="2" width="12" height="3" rx="1.5" fill="#f1f5f9"/>
+          <!-- Bottle Neck -->
+          <path d="M24 14V26C24 30 18 36 14 42V116C14 122 18 126 24 126H36C42 126 46 122 46 116V42C42 36 36 30 36 26V14H24Z" fill="url(#plastic-grad)" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1.8"/>
+          <!-- Inner liquid/glow line -->
+          <path d="M20 50C20 50 26 48 30 50C34 52 40 50 40 50V114C40 118 37 120 34 120H26C23 120 20 118 20 114V50Z" fill="#38bdf8" fill-opacity="0.2"/>
+          <path d="M18 45L18 115" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/>
+          <defs>
+            <linearGradient id="plastic-grad" x1="14" y1="14" x2="46" y2="126" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#0284c7" stop-opacity="0.8"/>
+              <stop offset="0.5" stop-color="#38bdf8" stop-opacity="0.6"/>
+              <stop offset="1" stop-color="#0369a1" stop-opacity="0.9"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
-      <p class="chip-tip" id="chip-tip">Hover a category to learn what it covers.</p>
+      <div class="pedestal-base">
+        <span class="pedestal-tag">PLASTIC</span>
+      </div>
     </div>
 
-    <aside class="hero-visual reveal delay-1" aria-hidden="true">
-      <div class="radar-card tilt-card">
-        <div class="radar">
-          <span class="radar-ring r1"></span>
-          <span class="radar-ring r2"></span>
-          <span class="radar-ring r3"></span>
-          <span class="radar-sweep"></span>
-          <span class="radar-blip b1"></span>
-          <span class="radar-blip b2"></span>
-          <span class="radar-blip b3"></span>
-          <span class="radar-core">YOLO</span>
-        </div>
-        <ul class="flow-list">
-          <li class="flow-item active"><span>1</span> Upload</li>
-          <li class="flow-item"><span>2</span> Detect</li>
-          <li class="flow-item"><span>3</span> Recycle tip</li>
-        </ul>
+    <!-- Pedestal 2: Metal -->
+    <div class="pedestal-slot">
+      <div class="pedestal-item-graphic">
+        <svg width="64" height="110" viewBox="0 0 64 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Can Top -->
+          <ellipse cx="32" cy="18" rx="24" ry="7" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1.5"/>
+          <ellipse cx="32" cy="18" rx="16" ry="4" fill="#94a3b8" fill-opacity="0.6"/>
+          <circle cx="32" cy="18" r="3" fill="#64748b"/>
+          <!-- Can Body -->
+          <path d="M8 18V92C8 98 18 102 32 102C46 102 56 98 56 92V18" fill="url(#metal-grad)" stroke="#cbd5e1" stroke-width="1.8"/>
+          <!-- Can Bottom Ring -->
+          <ellipse cx="32" cy="92" rx="24" ry="7" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+          <!-- Metallic Reflection Highlight -->
+          <path d="M16 22V96" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.75"/>
+          <path d="M22 24V94" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.4"/>
+          <defs>
+            <linearGradient id="metal-grad" x1="8" y1="18" x2="56" y2="102" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#64748b"/>
+              <stop offset="0.25" stop-color="#f8fafc"/>
+              <stop offset="0.5" stop-color="#cbd5e1"/>
+              <stop offset="0.8" stop-color="#94a3b8"/>
+              <stop offset="1" stop-color="#475569"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
-    </aside>
+      <div class="pedestal-base">
+        <span class="pedestal-tag">METAL</span>
+      </div>
+    </div>
+
+    <!-- Pedestal 3: Glass -->
+    <div class="pedestal-slot">
+      <div class="pedestal-item-graphic">
+        <svg width="56" height="135" viewBox="0 0 56 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Bottle Cap / Crown -->
+          <rect x="22" y="2" width="12" height="6" rx="1.5" fill="#eab308" stroke="#ca8a04" stroke-width="1.2"/>
+          <!-- Bottle Neck & Body -->
+          <path d="M23 8V38C23 48 13 58 13 72V124C13 129 17 132 23 132H33C39 132 43 129 43 124V72C43 58 33 48 33 38V8H23Z" fill="url(#glass-grad)" fill-opacity="0.85" stroke="#facc15" stroke-width="1.8"/>
+          <!-- Label on Bottle -->
+          <rect x="15" y="76" width="26" height="32" rx="3" fill="#fef08a" fill-opacity="0.8" stroke="#ca8a04" stroke-width="1"/>
+          <!-- Glass Reflection Highlight -->
+          <path d="M17 56V124" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <defs>
+            <linearGradient id="glass-grad" x1="13" y1="8" x2="43" y2="132" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#854d0e"/>
+              <stop offset="0.4" stop-color="#ca8a04"/>
+              <stop offset="0.7" stop-color="#eab308" stop-opacity="0.7"/>
+              <stop offset="1" stop-color="#713f12"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="pedestal-base">
+        <span class="pedestal-tag">GLASS</span>
+      </div>
+    </div>
   </div>
 
-  <div class="mode-banner mode-{{ model_info.mode }} reveal delay-2">
-    <strong>Model mode:</strong> {{ model_info.mode }}
-    <span>{{ model_info.note }}</span>
+  <!-- Right: Info & Action Card -->
+  <div class="hero-main-info">
+    <h1>Smart Waste Management<br>with RecycleMe</h1>
+    <p class="hero-subtext">
+      Upload or capture a waste image and get instant classification with recommendations. Powered by advanced YOLO technology for accurate detection of plastic, paper, glass, and metal.
+    </p>
+
+    <div class="frosted-action-card">
+      <div class="card-intro-badge">
+        <span>◎</span> TWO EASY WAYS TO START
+      </div>
+      <p class="card-guide-text">Just point your camera or upload a photo — AI does the rest.</p>
+
+      <div class="grid-2x2-btns">
+        <a href="{{ url_for('live_detection') }}" class="glass-tile-btn">
+          <div class="tile-btn-header">
+            <span>🔴</span> Live Camera
+          </div>
+          <div class="tile-btn-sub">Auto-detect in real time</div>
+        </a>
+
+        <a href="#detect-section" class="glass-tile-btn">
+          <div class="tile-btn-header">
+            <span>📁</span> Upload
+          </div>
+          <div class="tile-btn-sub">Choose a saved photo</div>
+        </a>
+
+        <a href="{{ url_for('bin_locations') }}" class="glass-tile-btn">
+          <div class="tile-btn-header">
+            <span>🗑️</span> Find Bin
+          </div>
+          <div class="tile-btn-sub">Campus bin locator</div>
+        </a>
+
+        <a href="{{ url_for('history') }}" class="glass-tile-btn">
+          <div class="tile-btn-header">
+            <span>📊</span> History
+          </div>
+          <div class="tile-btn-sub">Track every detection</div>
+        </a>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="panel detect-panel reveal delay-2" aria-label="Detect waste">
+<!-- ── Model Status Banner ── -->
+<div class="mode-banner mode-{{ model_info.mode }} reveal" style="margin-bottom: 24px;">
+  <strong>Model Status:</strong> {{ model_info.mode }}
+  <span>{{ model_info.note }}</span>
+</div>
+
+<!-- ── Upload & Detect Panel ── -->
+<section class="panel detect-panel reveal delay-1" id="detect-section" aria-label="Detect waste">
   <div class="section-head">
-    <h2>Detect Waste</h2>
-    <div class="pipeline" aria-hidden="true">
-      <span class="pipe-step" data-step="1">Upload</span>
-      <span class="pipe-line"></span>
-      <span class="pipe-step" data-step="2">Preview</span>
-      <span class="pipe-line"></span>
-      <span class="pipe-step" data-step="3">Detect</span>
+    <h2>Upload & Detect Waste</h2>
+    <div class="pipeline" aria-hidden="true" style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--muted);">
+      <span style="background:rgba(46,229,157,0.15);color:var(--leaf);padding:4px 10px;border-radius:20px;font-weight:700;">1. Upload</span>
+      <span>→</span>
+      <span style="background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">2. YOLO AI Scan</span>
+      <span>→</span>
+      <span style="background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;">3. Recycling Guide</span>
     </div>
   </div>
 
   <form id="detect-form" action="{{ url_for('detect') }}" method="post" enctype="multipart/form-data">
     <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop or choose an image">
       <div class="drop-scanline" aria-hidden="true"></div>
-      <div class="drop-sparkles" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i>
-      </div>
       <input type="file" name="image" id="image-input" accept="image/*" required />
       <div class="dropzone-inner" id="dropzone-inner">
         <div class="drop-icon" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="64" height="64">
-            <circle class="icon-ring" cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="2"/>
+          <svg viewBox="0 0 64 64" width="60" height="60">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/>
             <path d="M32 18v22M32 18l-8 8M32 18l8 8M18 46h28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <p class="drop-title">Drag & drop a waste image</p>
         <p class="drop-sub">or click to browse · JPG, PNG, WEBP</p>
-        <p class="drop-hint-live" id="drop-live">Waiting for an image…</p>
       </div>
       <video id="camera" autoplay playsinline muted hidden></video>
       <canvas id="capture-canvas" hidden></canvas>
       <img id="preview" alt="Selected waste preview" hidden />
-      <div class="preview-badge" id="preview-badge" hidden>Ready</div>
+      <div class="preview-badge" id="preview-badge" hidden>Ready to Scan</div>
     </div>
 
     <div class="actions">
-      <button type="button" class="btn btn-secondary magnetic" id="browse-btn">
-        <span class="btn-glow"></span><span class="btn-ripple"></span>Upload Image
+      <button type="button" class="btn btn-secondary" id="browse-btn">
+        📁 Choose Image
       </button>
-      <button type="button" class="btn btn-secondary magnetic" id="capture-btn">
-        <span class="btn-glow"></span><span class="btn-ripple"></span>Capture Image
-      </button>
-      <button type="submit" class="btn btn-primary magnetic" id="detect-btn" disabled>
-        <span class="btn-glow"></span><span class="btn-ripple"></span>
-        <span class="btn-label">Detect Waste</span>
+      <a href="{{ url_for('live_detection') }}" class="btn btn-secondary" id="live-btn">
+        🔴 Live Camera
+      </a>
+      <button type="submit" class="btn btn-primary" id="detect-btn" disabled>
+        🤖 Detect & Classify Waste
       </button>
     </div>
-    <p class="hint" id="preview-hint">Choose an image or use the camera to begin.</p>
   </form>
 </section>
 
+<!-- ── Marquee Tips ── -->
 <section class="tips-marquee" aria-hidden="true">
   <div class="marquee-track">
-    <span>Plastic → rinse & recycle</span>
-    <span>Paper → keep dry</span>
-    <span>Glass → separate carefully</span>
-    <span>Metal → cans go in metal bin</span>
-    <span>YOLO draws bounding boxes</span>
-    <span>Confidence score shows certainty</span>
-    <span>Plastic → rinse & recycle</span>
-    <span>Paper → keep dry</span>
-    <span>Glass → separate carefully</span>
-    <span>Metal → cans go in metal bin</span>
+    <span>🧴 Plastic → rinse & recycle</span>
+    <span>📄 Paper → keep dry</span>
+    <span>🍶 Glass → separate carefully</span>
+    <span>🔩 Metal → cans go in metal bin</span>
+    <span>🤖 YOLOv8 draws bounding boxes</span>
+    <span>🎯 Confidence score shows certainty</span>
+    <span>🧴 Plastic → rinse & recycle</span>
+    <span>📄 Paper → keep dry</span>
+    <span>🍶 Glass → separate carefully</span>
+    <span>🔩 Metal → cans go in metal bin</span>
   </div>
 </section>
 
-<section class="panel reveal delay-3" aria-label="Recent history">
+<!-- ── Recent History Panel ── -->
+<section class="panel reveal delay-2" aria-label="Recent history">
   <div class="section-head">
-    <h2>History</h2>
-    <a class="text-link" href="{{ url_for('history') }}">View all</a>
+    <h2>Recent Detections</h2>
+    <a class="text-link" href="{{ url_for('history') }}">View all history →</a>
   </div>
   {% if history %}
   <div class="history-list">
     {% for item in history %}
-    <a class="history-row stagger tilt-soft" style="--i: {{ loop.index0 }}" href="{{ url_for('history_detail', detection_id=item.id) }}">
+    <a class="history-row" href="{{ url_for('history_detail', detection_id=item.id) }}">
       <img src="{{ url_for('static', filename=item.result_image or item.original_image) }}" alt="" loading="lazy" />
       <div>
-        <strong>{{ item.primary_class or 'No detection' }}</strong>
+        <strong>{{ item.primary_class|title or 'No detection' }}</strong>
         <span>
-          {% if item.primary_confidence %}{{ '%.1f'|format(item.primary_confidence * 100) }}%{% else %}—{% endif %}
+          {% if item.primary_confidence %}{{ '%.1f'|format(item.primary_confidence * 100) }}% confidence{% else %}—{% endif %}
           · {{ item.created_at }}
         </span>
       </div>
@@ -138,9 +425,8 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state">
-    <div class="empty-orb"></div>
-    <p class="empty">No detections yet — drop an image above to see the magic.</p>
+  <div style="text-align:center;padding:30px 10px;color:var(--muted);">
+    <p>No detections yet — drop an image above or use the live camera to start.</p>
   </div>
   {% endif %}
 </section>

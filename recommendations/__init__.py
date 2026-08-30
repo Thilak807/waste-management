@@ -46,14 +46,49 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, str]] = {
         ),
     },
     "metal": {
-        "category": "Recyclable – Metal",
+        "category": "Recyclable – Metal & E-Waste",
         "recommendation": (
-            "Place recyclable metal containers in the appropriate recycling "
-            "collection. Rinse cans and crush them if space is limited."
+            "Place recyclable metal containers in the metal recycling collection. "
+            "Rinse cans and crush them if space is limited. Deposit electronic items in e-waste bins."
         ),
         "disposal_tips": (
-            "Aerosol cans must be empty. Scrap metal and electronics may need "
-            "special collection points."
+            "Aerosol cans must be empty. Scrap metal, wiring, and batteries belong in designated hazardous/e-waste hubs."
+        ),
+    },
+    "cardboard": {
+        "category": "Recyclable – Cardboard & Packaging",
+        "recommendation": (
+            "Flatten all cardboard boxes to save space. Remove heavy packaging tape and plastic wrapping before recycling."
+        ),
+        "disposal_tips": (
+            "Keep cardboard dry. Contaminated cardboard with heavy food or oil grease should go into general waste or compost."
+        ),
+    },
+    "organic": {
+        "category": "Compostable – Organic & Food Waste",
+        "recommendation": (
+            "Place fruit peels, food leftovers, vegetable waste, and coffee grounds into the green organic compost bin."
+        ),
+        "disposal_tips": (
+            "Do not mix plastic wrappers or cutlery with organic waste. Use biodegradable bags where permitted."
+        ),
+    },
+    "other": {
+        "category": "General / Non-Recyclable Waste",
+        "recommendation": (
+            "Place non-recyclable multi-layer packaging, sanitary items, and mixed household trash into the general waste bin."
+        ),
+        "disposal_tips": (
+            "Ensure no hazardous materials or lithium batteries are discarded in general waste."
+        ),
+    },
+    "trash": {
+        "category": "General Waste",
+        "recommendation": (
+            "Place general non-recyclable waste in the municipal sorting bin."
+        ),
+        "disposal_tips": (
+            "Separate recyclables whenever possible before disposal."
         ),
     },
 }

@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+{% block title %}Live Waste Detection — RecycleMe{% endblock %}
+{% block content %}
+<style>
+  /* ── Layout ─────────────────────────────────────────────────── */
+  .ld-page { padding: 20px 0 60px; }
+
+  .ld-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 16px;
+  }
+  .ld-header h1 {
+    font-family: var(--display); font-size: 2.2rem;
+    color: #ffffff; margin: 0;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(239, 68, 68, 0.2); color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700;
+  }
+  .live-badge .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .ld-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 28px;
+  }
+
+  /* ── Camera card ─────────────────────────────────────────────── */
+  .camera-card {
+    background: rgba(12, 33, 23, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+
+  .camera-viewport {
+    position: relative; width: 100%;
+    aspect-ratio: 4/3; background: #030a06;
+    overflow: hidden;
+  }
+
+  #live-video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  #overlay-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* scan corners */
+  .scan-corner {
+    position: absolute; width: 28px; height: 28px;
+    border-color: var(--leaf); border-style: solid; border-width: 0;
+    pointer-events: none; transition: opacity .3s;
+    filter: drop-shadow(0 0 6px var(--leaf));
+    z-index: 3;
+  }
+  .scan-corner.tl { top:16px; left:16px; border-top-width:3px; border-left-width:3px; border-radius: 6px 0 0 0; }
+  .scan-corner.tr { top:16px; right:16px; border-top-width:3px; border-right-width:3px; border-radius: 0 6px 0 0; }
+  .scan-corner.bl { bottom:16px; left:16px; border-bottom-width:3px; border-left-width:3px; border-radius: 0 0 0 6px; }
+  .scan-corner.br { bottom:16px; right:16px; border-bottom-width:3px; border-right-width:3px; border-radius: 0 0 6px 0; }
+
+  /* scan line */
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--leaf) 50%, transparent 100%);
+    box-shadow: 0 0 12px var(--leaf);
+    opacity: 0; top: 0;
+    z-index: 3;
+    animation: scanMove 2.5s linear infinite;
+  }
+  @keyframes scanMove {
+    0%   { top: 10%; opacity: 0; }
+    5%   { opacity: .9; }
+    95%  { opacity: .9; }
+    100% { top: 90%; opacity: 0; }
+  }
+
+  /* idle placeholder */
+  .cam-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: white; gap: 12px; background: rgba(5,15,10,.85);
+    backdrop-filter: blur(10px);
+    transition: opacity .4s;
+    z-index: 4;
+  }
+  .cam-placeholder .ph-icon { font-size: 3.5rem; }
+  .cam-placeholder p { font-size: 1.05rem; opacity: .9; margin: 0; color: var(--muted-light); }
+  .cam-placeholder.hidden { opacity: 0; pointer-events: none; }
+
+  /* status chip */
+  .cam-status {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(7, 24, 16, 0.88); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white; padding: 8px 22px; border-radius: 30px;
+    font-size: .95rem; font-weight: 600; white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
+    opacity: 0; transition: opacity .3s;
+    box-shadow: 0 8px 20px rgba(0,0,0,.4);
+    z-index: 5;
+  }
+  .cam-status.visible { opacity: 1; }
+  .cam-status .s-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #9ca3af; flex-shrink: 0;
+    transition: background .3s;
+  }
+  .cam-status .s-dot.detecting { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; animation: blink 1s infinite; }
+  .cam-status .s-dot.found     { background: #34d399; box-shadow: 0 0 10px #34d399; animation: none; opacity: 1; }
+
+  /* camera controls */
+  .cam-controls {
+    display: flex; gap: 12px; padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .btn-ld {
+    flex: 1; padding: 13px 10px;
+    border: none; border-radius: 12px; font-size: .95rem;
+    font-weight: 700; cursor: pointer; transition: all .25s ease;
+    font-family: var(--font); display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .btn-ld:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+  .btn-ld:disabled { opacity: .45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+  .btn-start  { background: linear-gradient(135deg,#10b981,#059669); color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); }
+  .btn-stop   { background: linear-gradient(135deg,#ef4444,#dc2626); color: white; }
+  .btn-manual { background: linear-gradient(135deg,#38bdf8,#0284c7); color: white; }
+
+  /* permission error */
+  .perm-error {
+    display: none; margin: 12px 20px 0;
+    background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px;
+    padding: 14px 16px; font-size: .9rem; color: #f87171;
+  }
+  .perm-error.visible { display: block; }
+
+  /* ── Results sidebar ─────────────────────────────────────────── */
+  .results-col { display: flex; flex-direction: column; gap: 20px; }
+
+  .result-card {
+    background: rgba(12, 33, 23, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.35); padding: 24px;
+    transition: all .3s ease;
+  }
+  .result-card h3 {
+    font-size: 1.15rem; font-weight: 700; color: #ffffff;
+    margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* detection result rows */
+  .det-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .det-row:last-child { border-bottom: none; }
+  .det-label { font-size: .88rem; color: var(--muted-light); }
+  .det-value { font-weight: 600; color: #ffffff; font-size: .95rem; }
+  .det-value.highlight { color: var(--leaf); font-size: 1.1rem; font-weight: 700; }
+
+  .conf-bar {
+    height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; margin-top: 6px;
+  }
+  .conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--leaf-deep), var(--leaf));
+    transition: width .5s ease; width: 0%;
+  }
+
+  /* empty state */
+  .det-empty {
+    text-align: center; padding: 20px 10px; color: var(--muted); font-size: .95rem;
+  }
+  .det-empty .e-icon { font-size: 2.2rem; margin-bottom: 8px; display: block; }
+
+  /* auto-save notice */
+  .autosave-notice {
+    display: none; background: rgba(46, 229, 157, 0.15); border: 1px solid rgba(46, 229, 157, 0.35);
+    border-radius: 10px; padding: 10px 14px; font-size: .88rem; color: var(--leaf);
+    margin-top: 10px; animation: fadeIn .4s ease;
+  }
+  .autosave-notice.show { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+  /* cooldown bar */
+  .cooldown-wrap { margin-top: 14px; }
+  .cooldown-label { font-size: .78rem; color: var(--muted); margin-bottom: 4px; }
+  .cooldown-bar {
+    height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden;
+  }
+  .cooldown-fill {
+    height: 100%; background: var(--leaf); width: 0%;
+    transition: width .1s linear;
+  }
+
+  /* ── Recent detections ───────────────────────────────────────── */
+  .recent-list { list-style: none; padding: 0; margin: 0; }
+  .recent-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: .88rem;
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-badge {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--leaf-deep), #10b981);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; color: white;
+  }
+  .recent-info { flex: 1; min-width: 0; }
+  .recent-class { font-weight: 600; color: #ffffff; }
+  .recent-meta { color: var(--muted); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-conf { font-size: .82rem; font-weight: 700; color: var(--leaf); flex-shrink: 0; }
+
+  .btn-map-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 11px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all .25s ease;
+  }
+  .btn-map-shortcut:hover {
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .ld-grid { grid-template-columns: 1fr; }
+    .results-col { flex-direction: row; flex-wrap: wrap; }
+    .result-card { flex: 1 1 280px; }
+  }
+  @media (max-width: 600px) {
+    .ld-header h1 { font-size: 1.6rem; }
+    .cam-controls { flex-direction: column; }
+    .results-col { flex-direction: column; }
+  }
+</style>
+
+<div class="ld-page">
+
+  <div class="ld-header">
+    <h1>
+      <span class="live-badge"><span class="dot"></span>LIVE</span>
+      Live Waste Detection
+    </h1>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <a href="{{ url_for('bin_locations') }}" style="color:var(--leaf);font-size:.92rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+        🗺️ Campus Bins Map
+      </a>
+      <a href="{{ url_for('index') }}" style="color:var(--muted);font-size:.9rem;text-decoration:none;">
+        ← Back
+      </a>
+    </div>
+  </div>
+
+  <div class="ld-grid">
+
+    <!-- ── Camera ───────────────────────────── -->
+    <div class="camera-card">
+      <div class="camera-viewport">
+        <video id="live-video" autoplay playsinline muted></video>
+        <canvas id="overlay-canvas"></canvas>
+
+        <!-- scan frame corners (show when active) -->
+        <div class="scan-corner tl" id="sc1"></div>
+        <div class="scan-corner tr" id="sc2"></div>
+        <div class="scan-corner bl" id="sc3"></div>
+        <div class="scan-corner br" id="sc4"></div>
+        <div class="scan-line" id="scan-line"></div>
+
+        <!-- idle placeholder -->
+        <div class="cam-placeholder" id="cam-placeholder">
+          <span class="ph-icon">📷</span>
+          <p>Click <strong>Start Detection</strong> to open camera</p>
+          <span style="font-size:0.85rem;color:var(--muted);">AI will scan in real-time & classify waste</span>
+        </div>
+
+        <!-- live status chip -->
+        <div class="cam-status" id="cam-status">
+          <span class="s-dot" id="s-dot"></span>
+          <span id="s-text">Ready</span>
+        </div>
+      </div>
+
+      <div class="cam-controls">
+        <button class="btn-ld btn-start" id="start-btn">🔴 Start Camera</button>
+        <button class="btn-ld btn-stop"  id="stop-btn"  disabled>⏹ Stop</button>
+        <button class="btn-ld btn-manual" id="save-btn" disabled>💾 Save Record</button>
+      </div>
+
+      <div class="perm-error" id="perm-error">
+        🚫 Camera access denied or unavailable. Please check your browser camera permissions.
+      </div>
+    </div>
+
+    <!-- ── Results sidebar ──────────────────── -->
+    <div class="results-col">
+
+      <!-- Current detection -->
+      <div class="result-card" id="result-card">
+        <h3>🎯 Detection Result</h3>
+        <div id="det-content">
+          <div class="det-empty">
+            <span class="e-icon">🔍</span>
+            Start camera and point it at any waste item
+          </div>
+        </div>
+
+        <div class="autosave-notice" id="autosave-notice">
+          ✅ Saved to history automatically!
+        </div>
+
+        <div class="cooldown-wrap" id="cooldown-wrap" style="display:none">
+          <div class="cooldown-label">Next auto-save cooldown…</div>
+          <div class="cooldown-bar"><div class="cooldown-fill" id="cooldown-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- Bin location shortcut -->
+      <div class="result-card" id="bin-card" style="display:none">
+        <h3>🗑️ Recommended Recycling Bin</h3>
+        <div id="bin-content"></div>
+        <a id="bin-map-link" href="{{ url_for('bin_locations') }}" class="btn-map-shortcut">
+          🗺️ Locate Bin on Campus Map →
+        </a>
+      </div>
+
+      <!-- Recent auto-saved detections -->
+      <div class="result-card">
+        <h3>🕑 Recent Live Detections</h3>
+        <ul class="recent-list" id="recent-list">
+          <li style="color:var(--muted);font-size:.88rem;padding:10px 0;">No detections yet this session.</li>
+        </ul>
+        <a href="{{ url_for('history') }}" style="display:block;text-align:center;margin-top:14px;color:var(--leaf);font-size:.85rem;font-weight:600;text-decoration:none;">
+          View full history →
+        </a>
+      </div>
+
+    </div><!-- /results-col -->
+  </div><!-- /ld-grid -->
+</div>
+
+<script>
+(function () {
+  /* ── DOM refs ───────────────────────────────────────── */
+  const video         = document.getElementById('live-video');
+  const overlayCanvas = document.getElementById('overlay-canvas');
+  const placeholder   = document.getElementById('cam-placeholder');
+  const camStatus     = document.getElementById('cam-status');
+  const sDot          = document.getElementById('s-dot');
+  const sText         = document.getElementById('s-text');
+  const detContent    = document.getElementById('det-content');
+  const autosaveNote  = document.getElementById('autosave-notice');
+  const cooldownWrap  = document.getElementById('cooldown-wrap');
+  const cooldownFill  = document.getElementById('cooldown-fill');
+  const recentList    = document.getElementById('recent-list');
+  const binCard       = document.getElementById('bin-card');
+  const binContent    = document.getElementById('bin-content');
+  const binMapLink    = document.getElementById('bin-map-link');
+  const permError     = document.getElementById('perm-error');
+  const startBtn      = document.getElementById('start-btn');
+  const stopBtn       = document.getElementById('stop-btn');
+  const saveBtn       = document.getElementById('save-btn');
+  const scanCorners   = [document.getElementById('sc1'), document.getElementById('sc2'),
+                         document.getElementById('sc3'), document.getElementById('sc4')];
+  const scanLine      = document.getElementById('scan-line');
+
+  /* ── State ──────────────────────────────────────────── */
+  let stream          = null;
+  let detectTimer     = null;
+  let cooldownTimer   = null;
+  let lastDetection   = null;
+  let lastSavedClass  = null;
+  let lastSavedAt     = 0;
+  let cooldownMs      = 8000;
+  let isRunning       = false;
+  let sessionSaves    = 0;
+
+  /* Waste-type emoji map */
+  const ICONS = {
+    plastic: '🧴', paper: '📄', cardboard: '📦', glass: '🍶',
+    metal: '🔩', organic: '🌿', other: '🗑️', trash: '🗑️'
+  };
+
+  const COLORS = {
+    plastic: '#38bdf8', paper: '#4ade80', cardboard: '#fb923c', glass: '#facc15',
+    metal: '#c084fc', organic: '#34d399', other: '#e879f9', trash: '#e879f9'
+  };
+
+  /* ── Camera start ───────────────────────────────────── */
+  async function startCamera() {
+    permError.classList.remove('visible');
+    try {
+      // Try environment/back camera first, fallback to user camera
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: false
+      };
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      video.srcObject = stream;
+      placeholder.classList.add('hidden');
+      scanCorners.forEach(c => c.style.opacity = '1');
+      scanLine.style.opacity = '1';
+      setStatus('detecting', 'Scanning feed…');
+      isRunning = true;
+      startBtn.disabled = true;
+      stopBtn.disabled  = false;
+      
+      video.onloadedmetadata = () => {
+        overlayCanvas.width = video.videoWidth || 640;
+        overlayCanvas.height = video.videoHeight || 480;
+      };
+
+      scheduleDetect();
+    } catch (err) {
+      console.error(err);
+      permError.classList.add('visible');
+    }
+  }
+
+  /* ── Camera stop ────────────────────────────────────── */
+  function stopCamera() {
+    isRunning = false;
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    clearTimeout(detectTimer);
+    clearInterval(cooldownTimer);
+    video.srcObject = null;
+    clearOverlay();
+    placeholder.classList.remove('hidden');
+    scanCorners.forEach(c => c.style.opacity = '0');
+    scanLine.style.opacity = '0';
+    setStatus('idle', 'Stopped');
+    camStatus.classList.remove('visible');
+    startBtn.disabled = false;
+    stopBtn.disabled  = true;
+    saveBtn.disabled  = true;
+  }
+
+  function clearOverlay() {
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  }
+
+  /* ── Status helpers ─────────────────────────────────── */
+  function setStatus(state, text) {
+    sText.textContent = text;
+    sDot.className = 's-dot ' + state;
+    camStatus.classList.add('visible');
+  }
+
+  /* ── Detect loop ────────────────────────────────────── */
+  function scheduleDetect() {
+    if (!isRunning) return;
+    detectTimer = setTimeout(runDetect, 1400);
+  }
+
+  async function runDetect() {
+    if (!isRunning) return;
+    if (!video.videoWidth) { scheduleDetect(); return; }
+
+    setStatus('detecting', 'Analyzing frame…');
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg', 0.82);
+
+      const res = await fetch('/api/live_detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData })
+      });
+      const data = await res.json();
+
+      if (data.success && data.primary_class && (data.confidence_pct >= 20 || data.detections?.length > 0)) {
+        lastDetection = data;
+        renderResult(data);
+        drawBoundingBoxes(data.detections || []);
+        setStatus('found', 'Found: ' + cap(data.primary_class));
+        saveBtn.disabled = false;
+        autoSave(data);
+      } else {
+        clearOverlay();
+        setStatus('detecting', 'Scanning for waste…');
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus('detecting', 'Retrying detection…');
+    }
+    scheduleDetect();
+  }
+
+  /* ── Draw Bounding Boxes on Overlay Canvas ───────────── */
+  function drawBoundingBoxes(detections) {
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    detections.forEach(det => {
+      if (!det.bbox) return;
+      const { x1, y1, x2, y2 } = det.bbox;
+      const color = COLORS[det.class_name] || '#38bdf8';
+      const label = `${cap(det.class_name)} ${det.confidence_pct || 0}%`;
+
+      // Bounding box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+      // Label background
+      ctx.font = 'bold 14px "DM Sans", sans-serif';
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillStyle = color;
+      ctx.fillRect(x1, Math.max(0, y1 - 24), textWidth + 12, 24);
+
+      // Label text
+      ctx.fillStyle = '#06180f';
+      ctx.fillText(label, x1 + 6, Math.max(16, y1 - 7));
+    });
+  }
+
+  /* ── Render current detection in sidebar ────────────── */
+  function renderResult(d) {
+    const conf = d.confidence_pct || 0;
+    const cls = (d.primary_class || 'other').toLowerCase();
+    const icon = ICONS[cls] || '🗑️';
+    const color = COLORS[cls] || '#38bdf8';
+
+    detContent.innerHTML = `
+      <div class="det-row">
+        <span class="det-label">Waste Category</span>
+        <span class="det-value highlight" style="color:${color}">${icon} ${cap(cls)}</span>
+      </div>
+      <div class="det-row">
+        <span class="det-label">Confidence Score</span>
+        <span class="det-value">${conf}%</span>
+      </div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${conf}%;background:${color};"></div></div>
+      <div class="det-row" style="margin-top:10px">
+        <span class="det-label">Disposal Guide</span>
+        <span class="det-value" style="font-size:0.85rem;max-width:180px;text-align:right;">${d.recommendation || 'Follow local recycling instructions.'}</span>
+      </div>
+    `;
+
+    /* Bin Card */
+    if (d.bin_type || d.bin_location) {
+      binContent.innerHTML = `
+        <div class="det-row">
+          <span class="det-label">Bin Type</span>
+          <span class="det-value" style="color:${color};font-weight:700;">${d.bin_type || 'General Waste'}</span>
+        </div>
+        <div class="det-row">
+          <span class="det-label">Campus Location</span>
+          <span class="det-value">📍 ${d.bin_location || 'Main Campus Center'}</span>
+        </div>
+        ${d.bin_facility ? `
+        <div class="det-row">
+          <span class="det-label">Facility</span>
+          <span class="det-value" style="font-size:0.85rem;">${d.bin_facility}</span>
+        </div>` : ''}
+      `;
+      binMapLink.href = `/bin_locations?focus=${cls}`;
+      binCard.style.display = 'block';
+    }
+  }
+
+  /* ── Auto-save with cooldown ────────────────────────── */
+  function autoSave(d) {
+    const now = Date.now();
+    const sameClass = d.primary_class === lastSavedClass;
+    const tooSoon = (now - lastSavedAt) < cooldownMs;
+    if (sameClass && tooSoon) return;
+
+    lastSavedClass = d.primary_class;
+    lastSavedAt    = now;
+
+    persistDetection(d, false).then(ok => {
+      if (!ok) return;
+      sessionSaves++;
+      addRecentItem(d);
+      flashAutosave();
+      startCooldown();
+    });
+  }
+
+  function startCooldown() {
+    cooldownWrap.style.display = 'block';
+    let elapsed = 0;
+    const step = 200;
+    cooldownFill.style.width = '0%';
+    clearInterval(cooldownTimer);
+    cooldownTimer = setInterval(() => {
+      elapsed += step;
+      cooldownFill.style.width = Math.min(100, (elapsed / cooldownMs) * 100) + '%';
+      if (elapsed >= cooldownMs) { clearInterval(cooldownTimer); cooldownWrap.style.display = 'none'; }
+    }, step);
+  }
+
+  function flashAutosave() {
+    autosaveNote.classList.add('show');
+    setTimeout(() => autosaveNote.classList.remove('show'), 3000);
+  }
+
+  /* ── Manual save ────────────────────────────────────── */
+  async function manualSave() {
+    if (!lastDetection) return;
+    saveBtn.disabled = true;
+    const ok = await persistDetection(lastDetection, true);
+    if (ok) { addRecentItem(lastDetection); flashAutosave(); }
+    saveBtn.disabled = false;
+  }
+
+  /* ── Persist to DB via API ──────────────────────────── */
+  async function persistDetection(d, force) {
+    try {
+      const res = await fetch('/api/save_live_detection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          original_image: '',
+          result_image: '',
+          detections: d.detections || [],
+          primary_class: d.primary_class,
+          primary_confidence: d.confidence || (d.confidence_pct / 100),
+          recommendation: d.recommendation || '',
+          bin_location: d.bin_location || null,
+          model_mode: 'live'
+        })
+      });
+      const json = await res.json();
+      return json.success;
+    } catch (e) { console.error(e); return false; }
+  }
+
+  /* ── Add item to in-page recent list ────────────────── */
+  function addRecentItem(d) {
+    const cls = (d.primary_class || 'other').toLowerCase();
+    const icon = ICONS[cls] || '🗑️';
+    const conf = d.confidence_pct || 0;
+    const time = new Date().toLocaleTimeString();
+
+    const li = document.createElement('li');
+    li.className = 'recent-item';
+    li.style.animation = 'fadeIn .4s ease both';
+    li.innerHTML = `
+      <div class="recent-badge">${icon}</div>
+      <div class="recent-info">
+        <div class="recent-class">${cap(cls)}</div>
+        <div class="recent-meta">${d.bin_location || 'Campus Center'} · ${time}</div>
+      </div>
+      <span class="recent-conf">${conf}%</span>
+    `;
+
+    if (sessionSaves === 1) recentList.innerHTML = '';
+    recentList.prepend(li);
+    while (recentList.children.length > 5) recentList.removeChild(recentList.lastChild);
+  }
+
+  /* ── Util ───────────────────────────────────────────── */
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  /* ── Event listeners ────────────────────────────────── */
+  startBtn.addEventListener('click', startCamera);
+  stopBtn.addEventListener('click', stopCamera);
+  saveBtn.addEventListener('click', manualSave);
+  window.addEventListener('beforeunload', stopCamera);
+})();
+</script>
+{% endblock %}

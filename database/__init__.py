@@ -76,6 +76,7 @@ def init_db() -> None:
                 primary_class TEXT,
                 primary_confidence REAL,
                 recommendation TEXT,
+                bin_location TEXT,
                 model_mode TEXT,
                 created_at TEXT NOT NULL
             );
@@ -91,12 +92,21 @@ def init_db() -> None:
             """
         )
 
-        # Seed admin user (plain demo hash marker — college project simplicity)
+        # Auto-migrate any existing detections table that might be missing bin_location
+        cols = [c["name"] for c in conn.execute("PRAGMA table_info(detections)").fetchall()]
+        if "bin_location" not in cols:
+            conn.execute("ALTER TABLE detections ADD COLUMN bin_location TEXT")
+
+        # Seed admin + demo user (plain demo hash marker — college project simplicity)
         cur = conn.execute("SELECT COUNT(*) AS c FROM users")
         if cur.fetchone()["c"] == 0:
             conn.execute(
                 "INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)",
                 (config.ADMIN_USERNAME, f"plain:{config.ADMIN_PASSWORD}", "admin", _now()),
+            )
+            conn.execute(
+                "INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)",
+                ("user", "plain:user123", "user", _now()),
             )
 
         # Seed categories
@@ -227,15 +237,16 @@ def save_detection(
     primary_class: Optional[str],
     primary_confidence: Optional[float],
     recommendation: str,
-    model_mode: str,
+    bin_location: Optional[str] = None,
+    model_mode: str = "",
 ) -> int:
     with get_db() as conn:
         cur = conn.execute(
             """
             INSERT INTO detections
             (original_image, result_image, detections_json, primary_class,
-             primary_confidence, recommendation, model_mode, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             primary_confidence, recommendation, bin_location, model_mode, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 original_image,
@@ -244,6 +255,7 @@ def save_detection(
                 primary_class,
                 primary_confidence,
                 recommendation,
+                bin_location,
                 model_mode,
                 _now(),
             ),
@@ -292,6 +304,22 @@ def detection_stats() -> Dict[str, Any]:
             "total": total,
             "by_class": [dict(r) for r in by_class],
         }
+
+
+def delete_detection(detection_id: int) -> bool:
+    """Delete a single detection record by ID."""
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM detections WHERE id = ?", (detection_id,))
+        return cur.rowcount > 0
+
+
+def clear_all_detections() -> int:
+    """Clear all detection records. Returns count of deleted records."""
+    with get_db() as conn:
+        cur = conn.execute("SELECT COUNT(*) AS c FROM detections")
+        count = cur.fetchone()["c"]
+        conn.execute("DELETE FROM detections")
+        return count
 
 
 # ---------------------------------------------------------------------------
