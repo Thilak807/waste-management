@@ -1,20 +1,215 @@
 {% extends "base.html" %}
-{% block title %}Admin — WasteSort AI{% endblock %}
+{% block title %}Admin Dashboard — WasteSort & Smart RVM{% endblock %}
 {% block content %}
 <section class="panel">
   <div class="section-head">
     <h2>Admin Dashboard</h2>
-    <a href="{{ url_for('admin_logout') }}">Logout</a>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="btn btn-secondary" href="{{ url_for('admin_transactions') }}">📜 View Disposal Ledger</a>
+      <a href="{{ url_for('admin_logout') }}">Logout</a>
+    </div>
   </div>
   <div class="mode-banner mode-{{ model_info.mode }}">
     <strong>YOLO:</strong> {{ model_info.mode }}
     <span>{{ model_info.note }}</span>
   </div>
   <p>Total detections stored: <strong>{{ stats.total }}</strong>
-    · <a href="{{ url_for('admin_reports') }}">View reports</a>
+    · <a href="{{ url_for('admin_reports') }}">View AI reports</a>
+    · <a href="{{ url_for('admin_transactions') }}">View Reverse Vending ledger ({{ recent_disposals|length }} recent)</a>
   </p>
 </section>
 
+<!-- ── Configurable Reward Points per Waste Type ─────────────── -->
+<section class="panel">
+  <div class="section-head">
+    <h2>⚙️ Configurable Reward Points Rates</h2>
+    <span class="mode-tag" style="background:rgba(46,229,157,0.15); color:var(--leaf); border:1px solid rgba(46,229,157,0.3); font-size:0.82rem; padding:4px 12px; border-radius:20px;">
+      Live Admin Pricing
+    </span>
+  </div>
+  <p style="color:var(--muted-light); font-size:0.9rem; margin-top:0;">
+    Set the reward points awarded per item and per kilogram for each waste category. These rates apply in real-time across the AI Detection page and Smart Reverse Vending kiosks.
+  </p>
+
+  <div style="overflow-x:auto; margin-bottom:24px;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+      <thead>
+        <tr style="border-bottom:1px solid #e2e8f0; color:var(--muted-light); text-align:left;">
+          <th style="padding:10px 12px;">Category</th>
+          <th style="padding:10px 12px;">Display Name</th>
+          <th style="padding:10px 12px;">Points / Item</th>
+          <th style="padding:10px 12px;">Points / kg</th>
+          <th style="padding:10px 12px;">Active</th>
+          <th style="padding:10px 12px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in waste_points_rules %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <form method="post" action="{{ url_for('admin_waste_points') }}">
+            <input type="hidden" name="action" value="update" />
+            <input type="hidden" name="category_code" value="{{ r.category_code }}" />
+            <td style="padding:10px 12px;">
+              <span style="font-size:1.3rem; vertical-align:middle;">{{ r.icon }}</span>
+              <code style="margin-left:6px;">{{ r.category_code }}</code>
+            </td>
+            <td style="padding:10px 12px;">
+              <input name="display_name" value="{{ r.display_name }}" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:6px 10px; color:#0f172a; font-size:0.86rem; width:160px;" />
+            </td>
+            <td style="padding:10px 12px;">
+              <input type="number" name="points_per_item" value="{{ r.points_per_item }}" min="0" style="background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px 10px; color:var(--leaf); font-weight:800; font-size:0.9rem; width:80px;" /> pts
+            </td>
+            <td style="padding:10px 12px;">
+              <input type="number" step="0.5" name="points_per_kg" value="{{ r.points_per_kg }}" min="0" style="background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px 10px; color:#38bdf8; font-weight:700; font-size:0.9rem; width:80px;" /> pts
+            </td>
+            <td style="padding:10px 12px;">
+              <input type="checkbox" name="is_active" value="1" {% if r.is_active %}checked{% endif %} />
+            </td>
+            <td style="padding:10px 12px;">
+              <button type="submit" class="btn btn-secondary" style="padding:6px 14px; font-size:0.8rem;">Save</button>
+            </td>
+          </form>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Add New Waste Point Type</h3>
+  <form method="post" action="{{ url_for('admin_waste_points') }}" class="inline-form" style="gap:10px;">
+    <input type="hidden" name="action" value="add" />
+    <input name="category_code" placeholder="code (e.g. tetra_pack)" required style="width:140px;" />
+    <input name="display_name" placeholder="Display Name" required style="width:140px;" />
+    <input type="number" name="points_per_item" placeholder="pts/item" value="5" required style="width:90px;" />
+    <input type="number" step="0.5" name="points_per_kg" placeholder="pts/kg" value="50.0" style="width:90px;" />
+    <input name="icon" placeholder="Emoji 📦" value="📦" style="width:70px;" />
+    <button class="btn btn-primary" type="submit">Add Waste Type</button>
+  </form>
+</section>
+
+<!-- ── Smart Reverse Vending Machines (RVM) Monitor ──────────── -->
+<section class="panel">
+  <div class="section-head">
+    <h2>🤖 Smart Reverse Vending Machines (RVM) Status</h2>
+    <span class="mode-tag" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:0.82rem; padding:4px 12px; border-radius:20px;">
+      {{ smart_machines|length }} Stations Online
+    </span>
+  </div>
+  <p style="color:var(--muted-light); font-size:0.9rem; margin-top:0;">
+    Monitor machine capacity, bin fill levels, and trigger empty/reset maintenance cycles.
+  </p>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px;">
+    {% for m in smart_machines %}
+    <div style="background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <strong style="color:#0f172a; font-size:1rem;">🤖 {{ m.name }}</strong>
+        <span style="background:rgba(16,185,129,0.2); color:#34d399; padding:2px 8px; border-radius:8px; font-size:0.75rem; font-weight:700;">
+          {{ m.status.upper() }}
+        </span>
+      </div>
+      <div style="font-size:0.82rem; color:var(--muted-light); margin-bottom:12px;">
+        📍 {{ m.location }} ({{ m.floor_building or 'Campus Hub' }})
+      </div>
+
+      <!-- Fill Progress Bar -->
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:4px;">
+          <span style="color:var(--muted);">Fill Level</span>
+          <strong style="color:{% if m.fill_percentage > 80 %}#f87171{% elif m.fill_percentage > 50 %}#fbbf24{% else %}#34d399{% endif %};">
+            {{ m.fill_percentage }}% ({{ m.total_items_collected }}/{{ m.capacity_items }})
+          </strong>
+        </div>
+        <div style="width:100%; height:8px; background:#ffffff; border:1px solid #cbd5e1; color:#0f172a; border-radius:8px; overflow:hidden;">
+          <div style="width:{{ m.fill_percentage }}%; height:100%; background:{% if m.fill_percentage > 80 %}#f87171{% elif m.fill_percentage > 50 %}#fbbf24{% else %}#34d399{% endif %}; border-radius:8px;"></div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+        <span style="font-size:0.75rem; color:var(--muted);">Emptied: {{ m.last_emptied_at[:10] }}</span>
+        <form method="post" action="{{ url_for('admin_machines_reset') }}" style="margin:0;">
+          <input type="hidden" name="machine_id" value="{{ m.id }}" />
+          <button type="submit" class="linkish" style="color:var(--leaf); font-size:0.82rem; font-weight:700;" onclick="return confirm('Empty this Reverse Vending Machine and reset fill to 0%?');">
+            🧹 Empty & Reset
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ── Reward Vouchers Catalog Management ────────────────────── -->
+<section class="panel">
+  <div class="section-head">
+    <h2>🎁 Manage Reward Vouchers & Catalog</h2>
+    <span style="color:var(--muted-light); font-size:0.88rem;">{{ rewards_catalog|length }} Items Listed</span>
+  </div>
+
+  <!-- Add New Reward Form -->
+  <h3>Add New Reward Voucher or Eco-Product</h3>
+  <form method="post" action="{{ url_for('admin_rewards') }}" class="stack-form" style="margin-bottom:24px; background:#f8fafc; padding:18px; border-radius:14px;">
+    <input type="hidden" name="action" value="add" />
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+      <label>Title <input name="title" placeholder="e.g. ₹50 Cafe Voucher" required /></label>
+      <label>Reward Value <input name="reward_value" placeholder="e.g. ₹50 OFF" required /></label>
+      <label>Points Required <input type="number" name="points_required" placeholder="500" required /></label>
+      <label>Category
+        <select name="category">
+          <option value="campus">Campus Canteen</option>
+          <option value="voucher">Store Voucher</option>
+          <option value="discount">Discount Coupon</option>
+          <option value="product">Eco Product</option>
+          <option value="donation">Environmental Donation</option>
+        </select>
+      </label>
+      <label>Code Prefix <input name="code_prefix" placeholder="CAFE" value="ECO" /></label>
+      <label>Icon Emoji <input name="icon" value="🎁" /></label>
+      <label>Initial Stock <input type="number" name="stock" value="100" /></label>
+    </div>
+    <label style="margin-top:8px;">Description <textarea name="description" rows="2" placeholder="Voucher terms, eligibility, and redemption guidance..."></textarea></label>
+    <button class="btn btn-primary" type="submit" style="margin-top:10px;">Create Reward</button>
+  </form>
+
+  <!-- Rewards List -->
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+      <thead>
+        <tr style="border-bottom:1px solid #e2e8f0; color:var(--muted-light); text-align:left;">
+          <th style="padding:10px 12px;">Item</th>
+          <th style="padding:10px 12px;">Category</th>
+          <th style="padding:10px 12px;">Points Price</th>
+          <th style="padding:10px 12px;">Value</th>
+          <th style="padding:10px 12px;">Stock</th>
+          <th style="padding:10px 12px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rw in rewards_catalog %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:12px;">
+            <span style="font-size:1.3rem; vertical-align:middle;">{{ rw.icon }}</span>
+            <strong style="margin-left:8px;">{{ rw.title }}</strong>
+          </td>
+          <td style="padding:12px;"><span style="text-transform:uppercase; font-size:0.75rem; color:var(--muted);">{{ rw.category }}</span></td>
+          <td style="padding:12px;"><strong style="color:#fbbf24;">{{ rw.points_required }} pts</strong></td>
+          <td style="padding:12px;">{{ rw.reward_value }}</td>
+          <td style="padding:12px;">{{ rw.stock }} units</td>
+          <td style="padding:12px;">
+            <form method="post" action="{{ url_for('admin_rewards') }}" style="margin:0;">
+              <input type="hidden" name="action" value="delete" />
+              <input type="hidden" name="reward_id" value="{{ rw.id }}" />
+              <button type="submit" class="linkish" style="color:var(--danger);" onclick="return confirm('Remove this reward from catalog?');">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ── Existing Manage Users Section ─────────────────────────── -->
 <section class="panel">
   <h2>Manage Users</h2>
   <form method="post" action="{{ url_for('admin_users') }}" class="inline-form">
@@ -40,6 +235,7 @@
   </ul>
 </section>
 
+<!-- ── Existing Waste Categories Section ─────────────────────── -->
 <section class="panel">
   <h2>Waste Categories</h2>
   <ul class="plain-list">
@@ -56,6 +252,7 @@
   <p class="hint">After adding a YOLO class, update <code>dataset/data.yaml</code> and retrain.</p>
 </section>
 
+<!-- ── Existing Recommendations Section ──────────────────────── -->
 <section class="panel">
   <h2>Update Recycling Recommendations</h2>
   {% for name, rec in recommendations.items() %}
@@ -70,6 +267,7 @@
   {% endfor %}
 </section>
 
+<!-- ── Existing Dataset Section ──────────────────────────────── -->
 <section class="panel">
   <h2>Add Dataset Image</h2>
   <form method="post" action="{{ url_for('admin_dataset') }}" enctype="multipart/form-data" class="inline-form">

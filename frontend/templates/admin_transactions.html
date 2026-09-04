@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Disposal Transactions Ledger — Admin{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <h2>📜 Reverse Vending Machine (RVM) Disposal Ledger</h2>
+      <p style="color:var(--muted-light); font-size:0.9rem; margin:4px 0 0;">
+        Complete transaction audit log of all waste deposits and points awarded.
+      </p>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('admin_dashboard') }}">← Back to Admin</a>
+  </div>
+
+  <div style="overflow-x:auto; margin-top:20px;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+      <thead>
+        <tr style="border-bottom:1px solid #e2e8f0; color:var(--muted-light); text-align:left;">
+          <th style="padding:10px 12px;">ID</th>
+          <th style="padding:10px 12px;">Date & Time</th>
+          <th style="padding:10px 12px;">User</th>
+          <th style="padding:10px 12px;">Machine Code</th>
+          <th style="padding:10px 12px;">Item Type</th>
+          <th style="padding:10px 12px;">Category</th>
+          <th style="padding:10px 12px;">Qty</th>
+          <th style="padding:10px 12px;">Weight</th>
+          <th style="padding:10px 12px;">Points Awarded</th>
+          <th style="padding:10px 12px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:12px;">#{{ t.id }}</td>
+          <td style="padding:12px; color:var(--muted-light);">{{ t.created_at }}</td>
+          <td style="padding:12px;"><strong>{{ t.username }}</strong> (ID: {{ t.user_id }})</td>
+          <td style="padding:12px;"><code>{{ t.machine_id }}</code></td>
+          <td style="padding:12px;">{{ t.item_type }}</td>
+          <td style="padding:12px;"><span style="text-transform:uppercase; font-size:0.75rem; color:var(--muted);">{{ t.waste_category }}</span></td>
+          <td style="padding:12px;">{{ t.quantity }}</td>
+          <td style="padding:12px;">{{ t.weight_kg }} kg</td>
+          <td style="padding:12px;"><strong style="color:var(--leaf);">+{{ t.points_earned }} pts</strong></td>
+          <td style="padding:12px;"><span style="background:rgba(16,185,129,0.18); color:#34d399; padding:2px 8px; border-radius:6px; font-size:0.78rem; font-weight:700;">{{ t.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,848 @@
+{% extends "base.html" %}
+{% block title %}Smart Reverse Vending Machine (RVM) — RecycleMe{% endblock %}
+{% block content %}
+<!-- html5-qrcode and Confetti -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  .kiosk-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px 0 60px;
+  }
+
+  .kiosk-machine-frame {
+    background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    border-radius: 28px;
+    padding: 32px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .kiosk-machine-frame::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #10b981, #38bdf8, #fbbf24, #10b981);
+  }
+
+  .kiosk-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 20px;
+  }
+  .kiosk-title-box h1 {
+    font-family: var(--display);
+    font-size: 2.2rem;
+    color: #0f172a;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .kiosk-meta {
+    font-size: 0.88rem;
+    color: var(--muted-light);
+  }
+
+  /* Two column kiosk interactive area */
+  .kiosk-main-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 28px;
+  }
+  @media (max-width: 860px) {
+    .kiosk-main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Chamber & Deposit Slot */
+  .deposit-chamber {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .chamber-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .chamber-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--leaf);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  /* Animated Hatch Graphic */
+  .hatch-visual {
+    height: 180px;
+    background: radial-gradient(circle at center, rgba(16, 185, 129, 0.1) 0%, #f1f5f9 80%);
+    border: 2px dashed rgba(46, 229, 157, 0.4);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+  }
+  .hatch-visual.open {
+    border-color: #38bdf8;
+    background: radial-gradient(circle at center, rgba(56, 189, 248, 0.2) 0%, rgba(0,0,0,0.7) 80%);
+    box-shadow: inset 0 0 30px rgba(56, 189, 248, 0.3);
+  }
+  .hatch-icon-big {
+    font-size: 3.6rem;
+    margin-bottom: 6px;
+    animation: floatItem 3s ease-in-out infinite;
+  }
+
+  /* Digital Scale sensor box */
+  .scale-sensor-box {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(46, 229, 157, 0.3);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .scale-readout {
+    font-family: monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--leaf);
+  }
+
+  /* Quick Recyclables Selector Grid */
+  .waste-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .waste-pick-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #0f172a;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .waste-pick-btn:hover, .waste-pick-btn.selected {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: var(--leaf);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  }
+  .waste-pick-btn .wp-icon { font-size: 1.6rem; }
+  .waste-pick-btn .wp-name { font-size: 0.78rem; font-weight: 700; text-align: center; }
+  .waste-pick-btn .wp-pts { font-size: 0.72rem; color: var(--leaf); font-weight: 800; }
+
+  /* Right Kiosk Panel: User Session & Cart */
+  .session-cart-panel {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* User identification card */
+  .kiosk-user-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(56, 189, 248, 0.08) 100%);
+    border: 1.5px solid rgba(46, 229, 157, 0.35);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  /* Session cart */
+  .session-items-list {
+    flex: 1;
+    min-height: 180px;
+    max-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-right: 4px;
+  }
+  .session-item-row {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .session-totals-box {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .btn-finish-deposit {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #0f172a;
+    border: none;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+    transition: all 0.25s var(--ease-spring);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-finish-deposit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.6);
+  }
+  .btn-finish-deposit:disabled {
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Scanner modal */
+  #qr-reader-container {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .kiosk-qty-bar {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  .chip-qty-btn {
+    background: rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip-qty-btn:hover, .chip-qty-btn.active {
+    background: rgba(46, 229, 157, 0.25);
+    border-color: var(--leaf);
+    color: var(--leaf);
+    transform: translateY(-1px);
+  }
+  .qty-stepper-box {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .btn-stepper {
+    background: rgba(15, 23, 42, 0.06);
+    border: none;
+    color: #0f172a;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-stepper:hover {
+    background: rgba(46, 229, 157, 0.3);
+    color: var(--leaf);
+  }
+  .stepper-val {
+    min-width: 32px;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    padding: 0 4px;
+    user-select: none;
+  }
+
+</style>
+
+<div class="kiosk-wrapper">
+  <div class="kiosk-machine-frame">
+    <!-- Top Bar -->
+    <div class="kiosk-top-bar">
+      <div class="kiosk-title-box">
+        <h1>🤖 Smart Reverse Vending Kiosk</h1>
+        <div class="kiosk-meta">Automated Deposit, Weight Verification & Instant Eco-Rewards</div>
+      </div>
+      <div>
+        <select id="kiosk-machine-select" onchange="onMachineChanged(this)" style="background:rgba(0,0,0,0.5); border:1px solid rgba(46,229,157,0.4); border-radius:12px; padding:10px 14px; color:#fff; font-size:0.9rem; font-family:var(--font);">
+          {% for m in machines %}
+          <option value="{{ m.machine_code }}" data-fill="{{ m.fill_percentage }}" data-loc="{{ m.location }}" {% if loop.first %}selected{% endif %}>
+            {{ m.name }} ({{ m.fill_percentage }}% full)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Interface -->
+    <div class="kiosk-main-grid">
+      <!-- Left Chamber & Ingestion -->
+      <div class="deposit-chamber">
+        <div>
+          <div class="chamber-header">
+            <span class="chamber-title">📥 Deposit Chamber & Sensors</span>
+            <span id="hatch-status-badge" style="background:rgba(16,185,129,0.2); color:#34d399; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;">
+              🟢 Ready for Ingestion
+            </span>
+          </div>
+
+          <!-- Animated Deposit Hatch -->
+          <div class="hatch-visual" id="hatch-visual-box">
+            <div class="hatch-icon-big" id="hatch-display-icon">♻️</div>
+            <strong id="hatch-status-text" style="color:#ffffff; font-size:1rem;">Insert Recyclable Waste</strong>
+            <span id="hatch-subtext" style="font-size:0.78rem; color:var(--muted-light);">Select an item below or present to sensor</span>
+          </div>
+
+          <!-- Digital Scale Sensor -->
+          <div class="scale-sensor-box">
+            <div>
+              <div style="font-size:0.75rem; color:var(--muted-light); font-weight:700; text-transform:uppercase;">Digital Weight Sensor</div>
+              <div style="font-size:0.8rem; color:var(--muted);">Sensor: Calibrated Load Cell</div>
+            </div>
+            <div class="scale-readout" id="live-scale-readout">0.000 kg</div>
+          </div>
+
+          <!-- Select Item to Deposit -->
+          <div style="font-size:0.8rem; font-weight:700; color:var(--muted-light); text-transform:uppercase; margin-bottom:8px;">
+            Select Recyclable Item:
+          </div>
+          <div class="waste-picker-grid">
+            {% for r in points_rules %}
+            <button
+              type="button"
+              class="waste-pick-btn {% if loop.first %}selected{% endif %}"
+              onclick="selectWasteItem('{{ r.category_code }}', '{{ r.display_name }}', '{{ r.icon }}', {{ r.points_per_item }}, {{ r.base_weight_kg }}, this)"
+            >
+              <span class="wp-icon">{{ r.icon }}</span>
+              <span class="wp-name">{{ r.display_name }}</span>
+              <span class="wp-pts">+{{ r.points_per_item }} pts</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ingest Quantity Stepper & Presets -->
+        <div class="kiosk-qty-bar">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:0.78rem; font-weight:700; color:var(--muted-light); text-transform:uppercase;">
+              Quantity to Ingest:
+            </span>
+            <span id="kiosk-subtotal-preview" style="font-size:0.82rem; font-weight:700; color:var(--leaf);">
+              1x = +5 pts · 0.035 kg
+            </span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div class="qty-stepper-box">
+              <button type="button" class="btn-stepper" onclick="adjustKioskIngestQty(-1)">−</button>
+              <span class="stepper-val" id="kiosk-ingest-qty-val">1</span>
+              <button type="button" class="btn-stepper" onclick="adjustKioskIngestQty(1)">+</button>
+            </div>
+            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+              <button type="button" class="chip-qty-btn active" onclick="setKioskIngestQty(1, this)">1x</button>
+              <button type="button" class="chip-qty-btn" onclick="setKioskIngestQty(2, this)">2x</button>
+              <button type="button" class="chip-qty-btn" onclick="setKioskIngestQty(4, this)">4x</button>
+              <button type="button" class="chip-qty-btn" onclick="setKioskIngestQty(5, this)">5x</button>
+              <button type="button" class="chip-qty-btn" onclick="setKioskIngestQty(10, this)">10x</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="simulateItemInsert()" style="width:100%; padding:12px; font-weight:700;">
+          📥 Ingest Selected Item Into Chamber
+        </button>
+      </div>
+
+      <!-- Right Panel: Session, User ID & Cart -->
+      <div class="session-cart-panel">
+        <div>
+          <!-- User Identification Banner -->
+          <div class="kiosk-user-card">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                👤
+              </div>
+              <div>
+                <strong style="color:#ffffff; font-size:1rem; display:block;" id="kiosk-username">{{ current_username or 'Demo Recycler' }}</strong>
+                <span style="font-size:0.78rem; color:var(--muted-light);" id="kiosk-user-balance">
+                  Balance: <strong style="color:var(--leaf);">{{ (user_profile.current_balance if user_profile else 50) }}</strong> pts
+                </span>
+              </div>
+            </div>
+            <button type="button" class="btn-qr-scan" onclick="openKioskQRModal()">
+              📷 Scan QR
+            </button>
+          </div>
+
+          <!-- Items in Current Session -->
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:0.8rem; font-weight:700; color:var(--muted-light); text-transform:uppercase;">
+              Items Deposited This Session
+            </span>
+            <span id="session-items-count-badge" style="background:rgba(46,229,157,0.15); color:var(--leaf); font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:8px;">
+              0 items
+            </span>
+          </div>
+
+          <div class="session-items-list" id="session-items-list">
+            <div id="empty-session-placeholder" style="text-align:center; padding:30px 10px; color:var(--muted); font-size:0.86rem;">
+              No items ingested yet. Select a recyclable item and press "Ingest Item" to deposit.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <!-- Session Totals -->
+          <div class="session-totals-box">
+            <div>
+              <span style="font-size:0.74rem; color:var(--muted-light); text-transform:uppercase;">Total Session Weight</span>
+              <div style="font-size:1.2rem; font-weight:800; color:#fff;" id="session-total-weight">0.000 kg</div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.74rem; color:var(--muted-light); text-transform:uppercase;">Total Reward</span>
+              <div style="font-size:1.6rem; font-weight:800; font-family:var(--display); color:var(--leaf);" id="session-total-pts">+0 pts</div>
+            </div>
+          </div>
+
+          <button type="button" class="btn-finish-deposit" id="btn-finish-session" onclick="finishKioskSession()" disabled>
+            <span>✨ Complete Deposit & Earn Points</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Kiosk QR Scanner Modal ────────────────────────────────── -->
+<div id="kiosk-qr-modal" class="rvm-modal-backdrop">
+  <div class="rvm-modal-card" style="max-width: 440px; text-align: left;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <h3 style="margin:0; font-family:var(--display); color:#ffffff;">📷 Scan User Recycling QR</h3>
+      <button type="button" onclick="closeKioskQRModal()" style="background:none; border:none; color:var(--muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+    </div>
+
+    <!-- Live Scanner Container -->
+    <div id="qr-reader-container" style="margin-bottom:14px;"></div>
+    <div id="kiosk-scanner-feedback" style="font-size:0.8rem; text-align:center; color:var(--muted); margin-bottom:14px;">
+      Position your QR code in front of the camera
+    </div>
+
+    <!-- Quick Switcher Alternative -->
+    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top:14px; margin-top:10px;">
+      <label style="font-size:0.8rem; font-weight:700; color:var(--muted-light); text-transform:uppercase; display:block; margin-bottom:6px;">
+        Or Switch User Profile:
+      </label>
+      <select onchange="onKioskUserSwitched(this)" style="width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:10px; color:#fff; font-size:0.9rem;">
+        {% for u in users %}
+        <option value="{{ u.id }}" data-username="{{ u.username }}">👤 {{ u.username }} ({{ u.role }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="button" class="btn btn-secondary" onclick="closeKioskQRModal()" style="width:100%; margin-top:14px;">
+      Close
+    </button>
+  </div>
+</div>
+
+<!-- ── Receipt Celebration Modal ─────────────────────────────── -->
+<div id="kiosk-receipt-modal" class="rvm-modal-backdrop">
+  <div class="rvm-modal-card" style="max-width:460px;">
+    <div style="font-size:3.5rem; margin-bottom:10px;">🎉</div>
+    <h2 style="color:#ffffff; font-family:var(--display); margin:0 0 6px;">Deposit Verified!</h2>
+    <p style="color:var(--muted-light); font-size:0.88rem; margin:0 0 16px;">
+      Smart Reverse Vending Machine has sorted and compressed your recyclable waste.
+    </p>
+
+    <div style="background:rgba(16,185,129,0.14); border:1.5px solid rgba(46,229,157,0.4); border-radius:16px; padding:16px; margin-bottom:18px;">
+      <span style="font-size:0.75rem; font-weight:700; color:var(--muted-light); text-transform:uppercase;">Points Credited</span>
+      <div id="receipt-pts-val" style="font-size:2.6rem; font-weight:800; font-family:var(--display); color:var(--leaf); line-height:1.2; margin:4px 0;">
+        +0 pts
+      </div>
+      <div style="display:flex; justify-content:space-around; font-size:0.82rem; color:#ffffff; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:8px;">
+        <span>Items: <strong id="receipt-items-count">0</strong></span>
+        <span>Weight: <strong id="receipt-items-wt">0.0 kg</strong></span>
+        <span>Streak: <strong id="receipt-streak" style="color:#f87171;">1 Day</strong></span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <a href="{{ url_for('rewards') }}" class="btn btn-primary" style="text-decoration:none; padding:12px 20px; font-weight:700;">
+        🎁 View Rewards & Badges →
+      </a>
+      <button type="button" class="btn btn-secondary" onclick="resetKioskSession()" style="padding:12px 18px;">
+        Next Deposit
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let selectedWaste = {
+    code: 'plastic_bottle',
+    name: 'Plastic Bottle',
+    icon: '🧴',
+    points: 5,
+    weight: 0.035
+  };
+
+  let sessionCart = [];
+  let currentDepositor = {
+    userId: {{ current_user_id or 2 }},
+    username: {{ (current_username or 'user') | tojson }}
+  };
+
+  let html5Scanner = null;
+
+  let kioskIngestQty = 1;
+
+  window.adjustKioskIngestQty = function(delta) {
+    kioskIngestQty = Math.max(1, kioskIngestQty + delta);
+    document.getElementById('kiosk-ingest-qty-val').textContent = kioskIngestQty;
+    updateSubtotalPreview();
+  };
+
+  window.setKioskIngestQty = function(val, btn) {
+    kioskIngestQty = Math.max(1, val);
+    document.getElementById('kiosk-ingest-qty-val').textContent = kioskIngestQty;
+    document.querySelectorAll('.chip-qty-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    updateSubtotalPreview();
+  };
+
+  function updateSubtotalPreview() {
+    const preview = document.getElementById('kiosk-item-total-preview');
+    const scale = document.getElementById('live-scale-readout');
+    const subPts = selectedWaste.points * kioskIngestQty;
+    const subWt = (selectedWaste.weight * kioskIngestQty).toFixed(3);
+    if (preview) {
+      preview.textContent = `${kioskIngestQty}x = +${subPts} pts · ${subWt} kg`;
+    }
+    if (scale) {
+      scale.textContent = `${subWt} kg`;
+    }
+  }
+
+  window.selectWasteItem = function(code, name, icon, points, weight, btn) {
+    document.querySelectorAll('.waste-pick-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    selectedWaste = { code, name, icon, points, weight };
+    document.getElementById('hatch-display-icon').textContent = icon;
+    document.getElementById('hatch-status-text').textContent = name;
+    updateSubtotalPreview();
+  };
+
+  window.simulateItemInsert = function() {
+    const box = document.getElementById('hatch-visual-box');
+    const badge = document.getElementById('hatch-status-badge');
+    const qty = kioskIngestQty;
+    
+    // Animate hatch opening
+    box.classList.add('open');
+    badge.innerHTML = `⚡ Ingesting ${qty}x ${selectedWaste.name}...`;
+    badge.style.background = 'rgba(56, 189, 248, 0.2)';
+    badge.style.color = '#38bdf8';
+
+    setTimeout(() => {
+      // Add or combine into sessionCart
+      const existing = sessionCart.find(c => c.code === selectedWaste.code);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        sessionCart.push({ ...selectedWaste, quantity: qty });
+      }
+      renderSessionCart();
+
+      // Close hatch animation
+      box.classList.remove('open');
+      badge.innerHTML = '🟢 Ready for Next Item';
+      badge.style.background = 'rgba(16, 185, 129, 0.2)';
+      badge.style.color = '#34d399';
+    }, 450);
+  };
+
+  function round(v, d) { return Math.round(v * Math.pow(10, d)) / Math.pow(10, d); }
+
+  function renderSessionCart() {
+    const list = document.getElementById('session-items-list');
+    const emptyMsg = document.getElementById('empty-session-placeholder');
+    const countBadge = document.getElementById('session-items-count-badge');
+    const finishBtn = document.getElementById('btn-finish-deposit');
+
+    if (sessionCart.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      countBadge.textContent = '0 items';
+      finishBtn.disabled = true;
+      document.getElementById('session-total-pts').textContent = '+0 pts';
+      document.getElementById('session-total-weight').textContent = '0.000 kg';
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    let totItems = 0;
+    let totPts = 0;
+    let totWt = 0.0;
+    let html = '';
+
+    sessionCart.forEach((item, idx) => {
+      const q = item.quantity || 1;
+      const linePts = item.points * q;
+      const lineWt = item.weight * q;
+
+      totItems += q;
+      totPts += linePts;
+      totWt += lineWt;
+
+      html += `
+        <div class="session-item-row">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.35rem;">${item.icon}</span>
+            <div>
+              <strong style="color:#fff; font-size:0.9rem; display:block;">${item.name}</strong>
+              <span style="font-size:0.75rem; color:var(--muted);">${q} × ${item.weight.toFixed(3)} kg = ${lineWt.toFixed(3)} kg</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="qty-stepper-box">
+              <button type="button" class="btn-stepper" style="width:24px; height:24px;" onclick="updateCartItemQty(${idx}, -1)">−</button>
+              <span class="stepper-val" style="min-width:24px;">${q}</span>
+              <button type="button" class="btn-stepper" style="width:24px; height:24px;" onclick="updateCartItemQty(${idx}, 1)">+</button>
+            </div>
+            <span style="color:var(--leaf); font-weight:800; font-size:0.95rem; min-width:55px; text-align:right;">+${linePts} pts</span>
+            <button type="button" onclick="removeItemFromSession(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.2rem; padding:0 4px;" title="Remove">&times;</button>
+          </div>
+        </div>
+      `;
+    });
+
+    countBadge.textContent = `${totItems} item${totItems > 1 ? 's' : ''}`;
+    finishBtn.disabled = false;
+
+    list.innerHTML = html;
+    document.getElementById('session-total-pts').textContent = `+${totPts} pts`;
+    document.getElementById('session-total-weight').textContent = `${totWt.toFixed(3)} kg`;
+  }
+
+  window.updateCartItemQty = function(idx, delta) {
+    if (!sessionCart[idx]) return;
+    const newQty = (sessionCart[idx].quantity || 1) + delta;
+    if (newQty <= 0) {
+      sessionCart.splice(idx, 1);
+    } else {
+      sessionCart[idx].quantity = newQty;
+    }
+    renderSessionCart();
+  };
+
+  window.removeItemFromSession = function(index) {
+    sessionCart.splice(index, 1);
+    renderSessionCart();
+  };
+
+  window.finishKioskSession = async function() {
+    if (sessionCart.length === 0) return;
+
+    const btn = document.getElementById('btn-finish-session');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⚙️ Processing Transaction...</span>';
+
+    const sel = document.getElementById('kiosk-machine-select');
+    const machineCode = sel ? sel.value : 'RVM-01-CAMPUS-NORTH';
+
+    const itemsPayload = sessionCart.map(c => ({
+      waste_category: c.code,
+      item_type: c.name,
+      quantity: c.quantity,
+      unit_weight_kg: c.weight,
+      weight_kg: round(c.weight * c.quantity, 3),
+      points: c.points * c.quantity
+    }));
+
+    try {
+      const resp = await fetch('/api/disposal/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentDepositor.userId,
+          machine_id: machineCode,
+          items: itemsPayload
+        })
+      });
+
+      const res = await resp.json();
+      if (!res.success) {
+        alert(res.error || 'Failed to record deposit.');
+        btn.disabled = false;
+        btn.innerHTML = '<span>✨ Complete Deposit & Earn Points</span>';
+        return;
+      }
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      }
+
+      // Update topbar badges
+      document.querySelectorAll('.user-points-badge').forEach(el => {
+        el.innerHTML = `<span>⭐</span> <span>${res.new_balance} pts</span>`;
+      });
+      const balSpan = document.getElementById('kiosk-user-balance');
+      if (balSpan) balSpan.innerHTML = `Balance: <strong style="color:var(--leaf);">${res.new_balance}</strong> pts`;
+
+      document.getElementById('receipt-pts-val').textContent = `+${res.points_earned} pts`;
+      document.getElementById('receipt-items-count').textContent = res.items_deposited;
+      document.getElementById('receipt-items-wt').textContent = `${res.total_weight_kg} kg`;
+      document.getElementById('receipt-streak').textContent = `${res.streak_days} Days`;
+      document.getElementById('kiosk-user-balance').innerHTML = `Balance: <strong style="color:var(--leaf);">${res.new_balance}</strong> pts`;
+
+      document.getElementById('kiosk-receipt-modal').classList.add('show');
+    } catch (err) {
+      alert('Error: ' + err);
+      btn.disabled = false;
+      btn.innerHTML = '<span>✨ Complete Deposit & Earn Points</span>';
+    }
+  };
+
+  window.resetKioskSession = function() {
+    sessionCart = [];
+    renderSessionCart();
+    document.getElementById('kiosk-receipt-modal').classList.remove('show');
+    const btn = document.getElementById('btn-finish-session');
+    btn.disabled = true;
+    btn.innerHTML = '<span>✨ Complete Deposit & Earn Points</span>';
+  };
+
+  // ── QR Scanner ────────────────────────────────────────────────────
+  window.openKioskQRModal = function() {
+    document.getElementById('kiosk-qr-modal').classList.add('show');
+    startCameraScanner();
+  };
+
+  window.closeKioskQRModal = function() {
+    document.getElementById('kiosk-qr-modal').classList.remove('show');
+    stopCameraScanner();
+  };
+
+  function startCameraScanner() {
+    if (typeof Html5Qrcode === 'undefined') return;
+    try {
+      html5Scanner = new Html5Qrcode('qr-reader-container');
+      html5Scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decodedText) => {
+          verifyQRToken(decodedText);
+          stopCameraScanner();
+        },
+        () => {}
+      ).catch(() => {
+        document.getElementById('kiosk-scanner-feedback').textContent = 'Camera not available. Please use user selector below.';
+      });
+    } catch (e) {
+      document.getElementById('kiosk-scanner-feedback').textContent = 'Camera not available. Please use user selector below.';
+    }
+  }
+
+  function stopCameraScanner() {
+    if (html5Scanner) {
+      html5Scanner.stop().catch(() => {}).then(() => { html5Scanner = null; });
+    }
+  }
+
+  async function verifyQRToken(token) {
+    try {
+      const resp = await fetch(`/api/user/qr-lookup?token=${encodeURIComponent(token)}`);
+      const res = await resp.json();
+      if (!res.success) {
+        alert(res.error || 'QR Token invalid.');
+        return;
+      }
+      currentDepositor.userId = res.user_id;
+      currentDepositor.username = res.username;
+      document.getElementById('kiosk-username').textContent = res.username;
+      document.getElementById('kiosk-user-balance').innerHTML = `Balance: <strong style="color:var(--leaf);">${res.current_balance}</strong> pts`;
+      closeKioskQRModal();
+    } catch (err) {
+      alert('Error verifying QR: ' + err);
+    }
+  }
+
+  window.onKioskUserSwitched = function(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    currentDepositor.userId = parseInt(opt.value);
+    currentDepositor.username = opt.getAttribute('data-username');
+    document.getElementById('kiosk-username').textContent = currentDepositor.username;
+    closeKioskQRModal();
+  };
+
+  window.onMachineChanged = function(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    const fill = opt.getAttribute('data-fill');
+    const loc = opt.getAttribute('data-loc');
+  };
+})();
+</script>
+{% endblock %}

@@ -1,15 +1,378 @@
 {% extends "base.html" %}
 {% block title %}Multi-Waste Detection Result — RecycleMe{% endblock %}
 {% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Canvas Confetti for Celebration -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
 <style>
+  /* ── Enhanced Result Grid with 3 Panels ───────────────────────── */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  /* ── Smart RVM Kiosk Station Card (Green Circled Zone) ───────── */
+  .smart-rvm-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
+    border: 1.5px solid rgba(16, 185, 129, 0.35);
+    border-radius: var(--radius-sm);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 0 20px rgba(16, 185, 129, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .smart-rvm-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #10b981, #38bdf8, #a855f7);
+  }
+
+  .rvm-header {
+    margin-bottom: 16px;
+  }
+  .rvm-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .rvm-badge {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--leaf);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rvm-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #34d399;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px #34d399;
+    animation: pulseDot 2s infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .rvm-machine-picker {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #0f172a;
+    font-size: 0.86rem;
+    font-family: var(--font);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .rvm-machine-picker:focus {
+    border-color: var(--leaf);
+  }
+
+  /* User identification box */
+  .rvm-user-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .user-id-flex {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .u-avatar {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+  }
+  .u-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .u-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .u-balance {
+    font-size: 0.78rem;
+    color: var(--muted-light);
+  }
+  .u-balance strong {
+    color: var(--leaf);
+  }
+  .btn-qr-scan {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-qr-scan:hover {
+    background: #38bdf8;
+    color: #000;
+  }
+
+  /* Items scroll */
+  .rvm-deposit-summary {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+  }
+  .deposit-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-light);
+    margin-bottom: 8px;
+  }
+  .deposit-items-scroll {
+    max-height: 175px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-right: 4px;
+    margin-bottom: 12px;
+  }
+  .deposit-items-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .deposit-items-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+  .rvm-item-row {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.15s;
+  }
+  .rvm-item-row:hover {
+    transform: translateX(3px);
+    border-color: rgba(46, 229, 157, 0.3);
+  }
+  .item-icon { font-size: 1.25rem; margin-right: 8px; }
+  .item-detail { flex: 1; min-width: 0; }
+  .item-detail strong {
+    font-size: 0.86rem;
+    color: #0f172a;
+    display: block;
+    line-height: 1.2;
+  }
+  .item-detail span {
+    font-size: 0.74rem;
+    color: var(--muted);
+  }
+  .item-pts {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--leaf);
+    background: rgba(46, 229, 157, 0.12);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(46, 229, 157, 0.25);
+  }
+  .rvm-empty-items {
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.86rem;
+    background: #f8fafc;
+    border-radius: 10px;
+  }
+
+  /* Totals bar */
+  .rvm-totals-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+  .tot-box {
+    display: flex;
+    flex-direction: column;
+  }
+  .tot-box.highlight {
+    text-align: right;
+  }
+  .tot-label {
+    font-size: 0.72rem;
+    color: var(--muted-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .tot-val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-family: var(--display);
+    color: #0f172a;
+  }
+  .text-leaf { color: var(--leaf) !important; }
+
+  /* Deposit button */
+  .btn-rvm-deposit {
+    width: 100%;
+    padding: 13px 18px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #0f172a;
+    border: none;
+    font-size: 0.98rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+    transition: all 0.25s var(--ease-spring);
+  }
+  .btn-rvm-deposit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(16, 185, 129, 0.6);
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  }
+  .btn-rvm-deposit:active {
+    transform: translateY(1px);
+  }
+  .btn-rvm-deposit .hatch-icon { font-size: 1.25rem; }
+  .rvm-subnote {
+    text-align: center;
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* ── Interactive Map Styles ──────────────────────────────────── */
+  .result-map-toolbar {
+    margin: 14px 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .custom-map-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .custom-pin {
+    width: 36px;
+    height: 36px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 2px solid #ffffff;
+    font-size: 16px;
+  }
+  .custom-pin span {
+    transform: rotate(45deg);
+  }
+  .pin-smart {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #7cfbc3;
+    animation: pinPulse 2s infinite;
+  }
+  @keyframes pinPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.8); }
+    50% { box-shadow: 0 0 25px rgba(16, 185, 129, 1); }
+  }
+
+  /* Modals */
+  .rvm-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(12px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .rvm-modal-backdrop.show { display: flex; }
+  .rvm-modal-card {
+    background: linear-gradient(145deg, #0d261b 0%, #081a13 100%);
+    border: 1.5px solid rgba(16, 185, 129, 0.35);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 480px;
+    padding: 30px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 40px rgba(46, 229, 157, 0.2);
+    text-align: center;
+    animation: modalPop 0.35s var(--ease-spring);
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   .res-summary-panel {
-    background: rgba(12, 33, 23, 0.78);
+    background: #ffffff;
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 24px;
     padding: 28px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.05);
     margin-bottom: 30px;
   }
 
@@ -25,7 +388,7 @@
   .res-header-flex h1 {
     font-family: var(--display);
     font-size: 2.2rem;
-    color: #ffffff;
+    color: #0f172a;
     margin: 0;
     display: flex;
     align-items: center;
@@ -55,9 +418,9 @@
     gap: 8px;
     padding: 8px 16px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: #ffffff;
+    background: #f1f5f9;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: #0f172a;
     font-weight: 700;
     font-size: 0.9rem;
   }
@@ -77,8 +440,8 @@
   }
 
   .bin-guide-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 18px;
     padding: 20px;
     display: flex;
@@ -110,7 +473,7 @@
   }
   .bgc-title {
     font-weight: 700;
-    color: #ffffff;
+    color: #0f172a;
     font-size: 1.05rem;
   }
   .bgc-location {
@@ -143,13 +506,13 @@
 
   /* ── Evaluation Metrics Grid ───────────────────────────────── */
   .metrics-eval-panel {
-    background: rgba(12, 33, 23, 0.78);
+    background: #ffffff;
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 24px;
     padding: 24px 28px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.05);
     margin-bottom: 30px;
   }
   .metrics-grid {
@@ -158,8 +521,8 @@
     gap: 14px;
   }
   .metric-box {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 16px;
     padding: 16px 18px;
     transition: transform 0.2s ease, border-color 0.2s ease;
@@ -171,7 +534,7 @@
   }
   .metric-box.highlight-metric {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%);
-    border: 1.5px solid rgba(46, 229, 157, 0.4);
+    border: 1.5px solid rgba(16, 185, 129, 0.35);
   }
   .mb-label {
     font-size: 0.8rem;
@@ -192,6 +555,114 @@
     font-size: 0.76rem;
     color: var(--muted);
   }
+
+  /* ── Interactive Quantity Stepper & Add Item Panel ──────────────── */
+  .qty-stepper-box {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .btn-stepper {
+    background: #f1f5f9;
+    border: none;
+    color: #0f172a;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .btn-stepper:hover {
+    background: rgba(46, 229, 157, 0.3);
+    color: var(--leaf);
+  }
+  .btn-stepper:active {
+    transform: scale(0.92);
+  }
+  .stepper-val {
+    min-width: 26px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #0f172a;
+    padding: 0 4px;
+    user-select: none;
+  }
+  .btn-item-del {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color 0.15s, transform 0.15s;
+  }
+  .btn-item-del:hover {
+    color: #f87171;
+    transform: scale(1.15);
+  }
+  .rvm-add-item-box {
+    background: #f1f5f9;
+    border: 1px dashed rgba(46, 229, 157, 0.35);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .add-item-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .extra-waste-select {
+    flex: 1;
+    min-width: 0;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 8px;
+    color: #0f172a;
+    font-size: 0.82rem;
+    outline: none;
+  }
+  .extra-waste-select option {
+    background: #0d261b;
+    color: #0f172a;
+  }
+  .btn-add-extra-waste {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-add-extra-waste:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+  }
+  .badge-mini {
+    background: rgba(46, 229, 157, 0.15);
+    color: var(--leaf);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(46, 229, 157, 0.25);
+  }
+
 </style>
 
 {% set ICONS = {'plastic':'🧴','paper':'📄','cardboard':'📦','glass':'🍶','metal':'🔩','organic':'🌿','other':'🗑️','trash':'🗑️'} %}
@@ -228,10 +699,13 @@
   </div>
 
   <div class="result-grid">
+    <!-- Panel 1: Original Image -->
     <figure class="media-card reveal delay-1">
       <figcaption>Original Uploaded Image</figcaption>
       <img src="{{ url_for('static', filename=upload_url) }}" alt="Uploaded waste" />
     </figure>
+
+    <!-- Panel 2: Multi-Object Detection Output -->
     <figure class="media-card reveal delay-2">
       <figcaption>Multi-Object Detection Output</figcaption>
       {% if result.result_image %}
@@ -240,7 +714,180 @@
       <p class="empty">No annotated image.</p>
       {% endif %}
     </figure>
+
+    <!-- Panel 3: Smart Waste Disposal & Reward Station (Right beside detection as in green diagram) -->
+    <div class="smart-rvm-card reveal delay-3">
+      <div class="rvm-header">
+        <div class="rvm-title-row">
+          <span class="rvm-badge">🤖 Smart Disposal Station</span>
+          <span class="rvm-status-pill"><span class="status-dot"></span> Machine Online</span>
+        </div>
+        <select id="active-machine-select" class="rvm-machine-picker" title="Select Smart Reverse Vending Machine">
+          {% for m in smart_machines %}
+          <option value="{{ m.machine_code }}" data-name="{{ m.name }}" data-loc="{{ m.location }}" data-lat="{{ m.lat }}" data-lng="{{ m.lng }}" {% if loop.first %}selected{% endif %}>
+            {{ m.name }} — {{ m.location }} ({{ m.fill_percentage }}% full)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- User Identification Box -->
+      <div class="rvm-user-box">
+        <div class="user-id-flex">
+          <div class="u-avatar">👤</div>
+          <div class="u-info">
+            <span class="u-name" id="current-depositor-name">{{ session.get('username') or 'Guest Recycler' }}</span>
+            <span class="u-balance" id="current-depositor-balance">Balance: <strong>{{ user_points or 0 }}</strong> pts</span>
+          </div>
+          <button type="button" class="btn-qr-scan" onclick="openQRScanModal()" title="Scan QR Code or Switch User">
+            📷 Scan QR
+          </button>
+        </div>
+      </div>
+
+      <!-- Detected Recyclables Breakdown for Deposit with Dynamic Add & Steppers -->
+      <div class="rvm-deposit-summary">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <span class="deposit-label" style="margin:0;">Recyclables Ready for Deposit:</span>
+          <span id="deposit-items-badge" class="badge-mini">0 items</span>
+        </div>
+
+        <!-- Reactive Items List -->
+        <div class="deposit-items-scroll" id="deposit-items-list">
+          <!-- Dynamically populated by renderDepositItems() -->
+        </div>
+
+        <!-- Add More Recyclable Items Section -->
+        <div class="rvm-add-item-box">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:0.75rem; font-weight:700; color:var(--muted-light); text-transform:uppercase;">
+              ➕ Add More Recyclable Items:
+            </span>
+            <span style="font-size:0.72rem; color:var(--leaf); font-weight:700;">+ Bonus Points</span>
+          </div>
+          <div class="add-item-controls-row">
+            <select id="extra-waste-select" class="extra-waste-select" title="Choose category to add">
+              {% if waste_points_rules %}
+                {% for r in waste_points_rules %}
+                <option value="{{ r.category_code }}"
+                        data-name="{{ r.display_name }}"
+                        data-icon="{{ r.icon }}"
+                        data-pts="{{ r.points_per_item }}"
+                        data-weight="{{ r.base_weight_kg }}">
+                  {{ r.icon }} {{ r.display_name }} (+{{ r.points_per_item }} pts)
+                </option>
+                {% endfor %}
+              {% else %}
+                <option value="plastic_bottle" data-name="Plastic Bottle" data-icon="🧴" data-pts="5" data-weight="0.035">🧴 Plastic Bottle (+5 pts)</option>
+                <option value="metal_can" data-name="Metal Can" data-icon="🥫" data-pts="10" data-weight="0.015">🥫 Metal Can (+10 pts)</option>
+                <option value="cardboard" data-name="Cardboard Box" data-icon="📦" data-pts="4" data-weight="0.2">📦 Cardboard Box (+4 pts)</option>
+                <option value="paper" data-name="Paper" data-icon="📄" data-pts="3" data-weight="0.02">📄 Paper (+3 pts)</option>
+                <option value="glass_bottle" data-name="Glass Bottle" data-icon="🍶" data-pts="6" data-weight="0.25">🍶 Glass Bottle (+6 pts)</option>
+              {% endif %}
+            </select>
+            <div class="qty-stepper-box">
+              <button type="button" class="btn-stepper" onclick="adjustAddQty(-1)">−</button>
+              <span class="stepper-val" id="extra-waste-qty-val">1</span>
+              <button type="button" class="btn-stepper" onclick="adjustAddQty(1)">+</button>
+            </div>
+            <button type="button" class="btn-add-extra-waste" onclick="addSelectedExtraWaste()">
+              + Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Calculated Totals -->
+        <div class="rvm-totals-bar">
+          <div class="tot-box">
+            <span class="tot-label">Est. Total Weight</span>
+            <strong class="tot-val" id="total-deposit-weight">0.000 kg</strong>
+          </div>
+          <div class="tot-box highlight">
+            <span class="tot-label">Reward Points</span>
+            <strong class="tot-val text-leaf" id="total-deposit-points">+0 pts</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button type="button" id="btn-deposit-waste" class="btn-rvm-deposit" onclick="executeSmartDisposal()">
+        <span class="hatch-icon">📥</span>
+        <span id="btn-deposit-label">Deposit & Claim Rewards</span>
+      </button>
+      <div class="rvm-subnote">Automatic AI verification & instant points crediting</div>
+    </div>
   </div>
+</section>
+
+<!-- ── ⭐ What Can Be Made From This (Upcycling & Repurposing Showcase) ── -->
+<section class="panel reveal delay-1" style="margin-top: 30px; background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 24px; padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.45);">
+  <div class="section-head" style="margin-bottom: 18px;">
+    <div>
+      <h2 style="font-family: var(--display); color: #0f172a; display: flex; align-items: center; gap: 10px; margin: 0;">
+        <span>💡</span> What Can Be Made From This Material?
+      </h2>
+      <p style="color: var(--muted-light); font-size: 0.95rem; margin: 6px 0 0;">
+        Instead of landfill waste, your sorted <strong style="color: var(--leaf);">{{ result.primary_class|title if result else 'Recyclables' }}</strong> can be transformed into these useful items:
+      </p>
+    </div>
+    <span style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 5px 14px; border-radius: 20px;">
+      ✨ Circular Economy
+    </span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+    {% if result and result.what_can_be_made %}
+      {% for p in result.what_can_be_made %}
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; transition: all 0.25s ease;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #ffffff; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 1.45rem;">
+              {{ p.icon }}
+            </div>
+            <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 20px; background: #f1f5f9; color: var(--muted-light); border: 1px solid #e2e8f0;">
+              {{ p.badge }}
+            </span>
+          </div>
+          <h4 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 6px;">{{ p.title }}</h4>
+          <p style="font-size: 0.85rem; color: var(--muted-light); line-height: 1.5; margin: 0; flex: 1;">{{ p.description }}</p>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="grid-column: 1/-1; text-align: center; color: var(--muted); padding: 20px;">
+        Recycling and upcycling ideas loaded for this material.
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ── Interactive Smart Reverse Vending & Recycling Map (Down) ── -->
+<section class="panel reveal delay-2" id="smart-map-section" style="margin-top: 30px;">
+  <div class="section-head">
+    <div>
+      <h2>🗺️ Smart Reverse Vending Stations & Campus Map</h2>
+      <p style="color:var(--muted-light);font-size:0.92rem;margin:4px 0 0;">
+        Locate nearby campus smart reverse vending machines (RVM) and categorized bins for your detected recyclables.
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="mode-tag" style="background:rgba(56,189,248,0.18);color:#38bdf8;border:1px solid rgba(56,189,248,0.35);font-size:0.82rem;padding:5px 14px;border-radius:20px;">
+        📍 {{ smart_machines|length }} Smart Machines Online
+      </span>
+      <a class="text-link" href="{{ url_for('bin_locations') }}" style="font-size:0.88rem;">Open Full Map →</a>
+    </div>
+  </div>
+
+  <div class="result-map-toolbar">
+    <div class="filter-pills">
+      <button type="button" class="filter-pill active" onclick="filterMapStations('all', this)">🌐 All Stations</button>
+      <button type="button" class="filter-pill" onclick="filterMapStations('machine', this)">🤖 Smart RVMs</button>
+      <button type="button" class="filter-pill" onclick="filterMapStations('plastic', this)">🧴 Plastic</button>
+      <button type="button" class="filter-pill" onclick="filterMapStations('metal', this)">🥫 Metal</button>
+      <button type="button" class="filter-pill" onclick="filterMapStations('paper', this)">📄 Paper / Cardboard</button>
+      <button type="button" class="filter-pill" onclick="filterMapStations('glass', this)">🍶 Glass</button>
+    </div>
+  </div>
+
+  <div id="result-campus-map" style="height: 440px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); margin-top: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); z-index: 1;"></div>
 </section>
 
 <!-- ── Model Evaluation & Confidence Details Panel ───────────── -->
@@ -404,4 +1051,576 @@
   {% endif %}
   <p class="saved" style="margin-top:16px;">Saved to history as record #{{ detection_id }}.</p>
 </section>
+
+<!-- ── Deposit Success & Celebration Modal ────────────────────── -->
+<div id="rvm-success-modal" class="rvm-modal-backdrop">
+  <div class="rvm-modal-card">
+    <div style="font-size: 3.5rem; margin-bottom: 12px; animation: bounce 1s infinite alternate;">🎉</div>
+    <h2 style="font-family: var(--display); color: #0f172a; margin: 0 0 8px; font-size: 1.8rem;">
+      Deposit Verified!
+    </h2>
+    <p style="color: var(--muted-light); font-size: 0.95rem; margin-bottom: 20px;">
+      Your recyclable waste has been verified and deposited into the Smart Reverse Vending Machine.
+    </p>
+
+    <div style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 16px; margin-bottom: 20px;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted-light); text-transform: uppercase; letter-spacing: 0.05em;">Reward Points Credited</span>
+      <div id="modal-pts-earned" style="font-size: 2.6rem; font-weight: 800; font-family: var(--display); color: var(--leaf); line-height: 1.2; margin: 4px 0;">
+        +0 pts
+      </div>
+      <div style="display: flex; justify-content: space-around; font-size: 0.85rem; color: #0f172a; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 8px;">
+        <span>Items: <strong id="modal-items-count">0</strong></span>
+        <span>Weight: <strong id="modal-items-weight">0.0 kg</strong></span>
+        <span>New Balance: <strong id="modal-new-balance" style="color:var(--leaf)">0 pts</strong></span>
+      </div>
+    </div>
+
+    <!-- Unlocked Badges Container (If any) -->
+    <div id="modal-new-badges" style="display:none; margin-bottom: 20px;">
+      <div style="font-size:0.85rem; font-weight:700; color:#fbbf24; margin-bottom:8px;">🏆 New Badge Unlocked!</div>
+      <div id="modal-badges-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="{{ url_for('rewards') }}" class="btn btn-primary" style="text-decoration:none; padding:12px 22px; font-weight:700;">
+        🎁 Redeem Rewards & Coupons →
+      </a>
+      <button type="button" class="btn btn-secondary" onclick="closeSuccessModal()" style="padding:12px 20px;">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── QR Code Identification & User Switcher Modal ────────────── -->
+<div id="rvm-qr-modal" class="rvm-modal-backdrop">
+  <div class="rvm-modal-card" style="max-width: 440px; text-align: left;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+      <h3 style="margin: 0; font-family: var(--display); color: #0f172a; display: flex; align-items: center; gap: 8px;">
+        📷 User QR Identification
+      </h3>
+      <button type="button" onclick="closeQRModal()" style="background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer;">&times;</button>
+    </div>
+
+    <p style="font-size: 0.88rem; color: var(--muted-light); margin-top: 0;">
+      Scan your personal Recycling QR code or select a registered user to connect your account to this Smart Machine:
+    </p>
+
+    <!-- Simulated QR Camera Feed / Token Input -->
+    <div style="background: rgba(0,0,0,0.4); border: 1px dashed rgba(46,229,157,0.4); border-radius: 14px; padding: 18px; text-align: center; margin-bottom: 18px;">
+      <div style="font-size: 2.5rem; margin-bottom: 6px;">📱</div>
+      <div style="font-size: 0.85rem; color: var(--muted-light); margin-bottom: 12px;">Enter User QR Token or Username:</div>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="qr-token-input" placeholder="e.g. USER-0002-USER" style="flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 12px; color:#fff; font-size:0.9rem;" />
+        <button type="button" onclick="lookupQRToken()" style="background:var(--leaf); color:#000; border:none; border-radius:8px; padding:8px 14px; font-weight:700; cursor:pointer;">
+          Verify
+        </button>
+      </div>
+      <div id="qr-lookup-msg" style="font-size:0.8rem; margin-top:8px; display:none;"></div>
+    </div>
+
+    <!-- Quick User Switcher Selector -->
+    <div style="margin-bottom: 18px;">
+      <label style="font-size: 0.82rem; font-weight: 700; color: var(--muted-light); text-transform: uppercase; display: block; margin-bottom: 6px;">
+        Or Quick Select Demo Account:
+      </label>
+      <select id="quick-user-select" onchange="onQuickUserSelected(this)" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 10px; color: #fff; font-size: 0.9rem;">
+        {% for u in registered_users %}
+        <option value="{{ u.id }}" data-username="{{ u.username }}" {% if session.get('username') == u.username %}selected{% endif %}>
+          👤 {{ u.username }} ({{ u.role }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="button" class="btn btn-secondary" onclick="closeQRModal()" style="width: 100%;">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Global deposit items state initialized from detected items
+  window.currentDepositItems = [
+    {% if deposit_items %}
+      {% for itm in deposit_items %}
+      {
+        category_code: {{ itm.class_name | tojson }},
+        display_name: {{ itm.display_name | tojson }},
+        icon: {{ itm.icon | tojson }},
+        quantity: {{ itm.quantity or 1 }},
+        unit_weight_kg: {{ itm.weight_kg or 0.05 }},
+        points_per_item: {{ itm.points or 5 }}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    {% endif %}
+  ];
+
+  // Map of active waste rules
+  const wasteRulesMap = {
+    {% if waste_points_rules %}
+      {% for r in waste_points_rules %}
+      {{ r.category_code | tojson }}: {
+        code: {{ r.category_code | tojson }},
+        name: {{ r.display_name | tojson }},
+        icon: {{ r.icon | tojson }},
+        points: {{ r.points_per_item }},
+        weight: {{ r.base_weight_kg }}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    {% endif %}
+  };
+
+  // Render deposit items reactively
+  window.renderDepositItems = function() {
+    const container = document.getElementById('deposit-items-list');
+    const badge = document.getElementById('deposit-items-badge');
+    const wtEl = document.getElementById('total-deposit-weight');
+    const ptsEl = document.getElementById('total-deposit-points');
+    const btn = document.getElementById('btn-deposit-waste');
+    if (!container) return;
+
+    if (!window.currentDepositItems || window.currentDepositItems.length === 0) {
+      container.innerHTML = `
+        <div class="rvm-empty-items">
+          <span>⚠️ No recyclable items in list. Use "+ Add More" below to add waste.</span>
+        </div>
+      `;
+      if (badge) badge.textContent = '0 items';
+      if (wtEl) wtEl.textContent = '0.000 kg';
+      if (ptsEl) ptsEl.textContent = '+0 pts';
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+      }
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+
+    let totalItems = 0;
+    let totalWeight = 0.0;
+    let totalPoints = 0;
+    let html = '';
+
+    window.currentDepositItems.forEach((item, idx) => {
+      const qty = item.quantity || 1;
+      const unitWt = item.unit_weight_kg || 0.05;
+      const unitPts = item.points_per_item || 5;
+      const lineWeight = round(unitWt * qty, 3);
+      const linePts = unitPts * qty;
+
+      totalItems += qty;
+      totalWeight += lineWeight;
+      totalPoints += linePts;
+
+      html += `
+        <div class="rvm-item-row" id="rvm-row-${idx}">
+          <span class="item-icon">${item.icon || '🗑️'}</span>
+          <div class="item-detail">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <strong>${item.display_name}</strong>
+              <button type="button" class="btn-item-del" onclick="removeDisposalItem(${idx})" title="Remove item">&times;</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--muted); margin-bottom:5px;">
+              <span>Unit: ${unitPts} pts · ~${unitWt.toFixed(3)} kg</span>
+              <span style="color:var(--muted-light);">${lineWeight.toFixed(3)} kg</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="qty-stepper-box">
+                <button type="button" class="btn-stepper" onclick="updateDisposalItemQty(${idx}, -1)" title="Decrease quantity">−</button>
+                <span class="stepper-val">${qty}</span>
+                <button type="button" class="btn-stepper" onclick="updateDisposalItemQty(${idx}, 1)" title="Increase quantity">+</button>
+              </div>
+              <div class="item-pts">+${linePts} pts</div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    if (badge) badge.textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+    if (wtEl) wtEl.textContent = `${totalWeight.toFixed(3)} kg`;
+    if (ptsEl) ptsEl.textContent = `+${totalPoints} pts`;
+  };
+
+  function round(val, dec) {
+    return Math.round(val * Math.pow(10, dec)) / Math.pow(10, dec);
+  }
+
+  // Stepper handlers
+  window.updateDisposalItemQty = function(idx, delta) {
+    if (!window.currentDepositItems[idx]) return;
+    const newQty = (window.currentDepositItems[idx].quantity || 1) + delta;
+    if (newQty <= 0) {
+      window.currentDepositItems.splice(idx, 1);
+    } else {
+      window.currentDepositItems[idx].quantity = newQty;
+    }
+    renderDepositItems();
+  };
+
+  window.removeDisposalItem = function(idx) {
+    window.currentDepositItems.splice(idx, 1);
+    renderDepositItems();
+  };
+
+  window.adjustAddQty = function(delta) {
+    const el = document.getElementById('extra-waste-qty-val');
+    if (!el) return;
+    let curr = parseInt(el.textContent) || 1;
+    curr = Math.max(1, curr + delta);
+    el.textContent = curr;
+  };
+
+  window.addSelectedExtraWaste = function() {
+    const sel = document.getElementById('extra-waste-select');
+    const qtyEl = document.getElementById('extra-waste-qty-val');
+    if (!sel || !qtyEl) return;
+
+    const opt = sel.options[sel.selectedIndex];
+    const catCode = opt.value;
+    const name = opt.getAttribute('data-name');
+    const icon = opt.getAttribute('data-icon');
+    const pts = parseInt(opt.getAttribute('data-pts')) || 5;
+    const weight = parseFloat(opt.getAttribute('data-weight')) || 0.05;
+    const qty = Math.max(1, parseInt(qtyEl.textContent) || 1);
+
+    // Check if category already exists in current deposit items
+    const existing = window.currentDepositItems.find(i => i.category_code === catCode);
+    if (existing) {
+      existing.quantity += qty;
+    } else {
+      window.currentDepositItems.push({
+        category_code: catCode,
+        display_name: name,
+        icon: icon,
+        quantity: qty,
+        unit_weight_kg: weight,
+        points_per_item: pts
+      });
+    }
+
+    // Reset qty stepper back to 1
+    qtyEl.textContent = '1';
+    renderDepositItems();
+  };
+
+  window.currentDepositor = {
+    userId: {{ session.get('user_id') or 2 }},
+    username: {{ (session.get('username') or 'user') | tojson }},
+    balance: {{ user_points or 0 }}
+  };
+
+  // Map Data
+  const defaultCenter = [{{ map_center.lat or 12.9716 }}, {{ map_center.lng or 77.5946 }}];
+  const smartMachinesData = {{ smart_machines | tojson }};
+  const binsData = {{ bin_locations | tojson }};
+
+  let mapInstance = null;
+  let allMarkers = [];
+
+  function initResultMap() {
+    const mapEl = document.getElementById('result-campus-map');
+    if (!mapEl) return;
+
+    mapInstance = L.map('result-campus-map', {
+      zoomControl: true,
+      scrollWheelZoom: false
+    }).setView(defaultCenter, 17);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      maxZoom: 19
+    }).addTo(mapInstance);
+
+    // Plot Smart Machines
+    smartMachinesData.forEach(m => {
+      const lat = m.lat || defaultCenter[0];
+      const lng = m.lng || defaultCenter[1];
+
+      const customIcon = L.divIcon({
+        className: 'custom-map-icon',
+        html: `<div class="custom-pin pin-smart"><span>🤖</span></div>`,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+        popupAnchor: [0, -22]
+      });
+
+      const popupHtml = `
+        <div style="font-family:sans-serif; min-width:210px; color:#1e293b;">
+          <div style="font-weight:800; font-size:1.02rem; color:#0f766e; margin-bottom:4px;">
+            🤖 ${m.name}
+          </div>
+          <div style="font-size:0.82rem; color:#64748b; margin-bottom:6px;">
+            📍 ${m.location} (${m.floor_building || 'Ground Floor'})
+          </div>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:6px 8px; font-size:0.8rem; margin-bottom:8px;">
+            <div><strong>Status:</strong> <span style="color:#16a34a; font-weight:700;">${m.status.toUpperCase()}</span></div>
+            <div><strong>Fill Level:</strong> ${m.fill_percentage}% (Capacity ${m.capacity_items} items)</div>
+            <div><strong>Rewards:</strong> 5–10 pts / item</div>
+          </div>
+          <button type="button" onclick="selectMachineFromMap('${m.machine_code}')" style="width:100%; background:#059669; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:0.82rem; font-weight:700; cursor:pointer;">
+            Select This Machine
+          </button>
+        </div>
+      `;
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(popupHtml);
+      allMarkers.push({ marker, type: 'machine', category: 'machine' });
+    });
+
+    // Plot Bins
+    Object.keys(binsData).forEach(key => {
+      if (key === 'trash') return;
+      const bin = binsData[key];
+      const lat = bin.lat || defaultCenter[0];
+      const lng = bin.lng || defaultCenter[1];
+      const color = bin.color || '#34d399';
+      const iconEmoji = bin.icon || '🗑️';
+
+      const customIcon = L.divIcon({
+        className: 'custom-map-icon',
+        html: `<div class="custom-pin" style="background:${color}; border-color:${color};"><span>${iconEmoji}</span></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -20]
+      });
+
+      const popupHtml = `
+        <div style="font-family:sans-serif; min-width:200px; color:#1e293b;">
+          <div style="font-weight:800; font-size:0.98rem; color:${color}; margin-bottom:4px;">
+            ${iconEmoji} ${bin.bin_type}
+          </div>
+          <div style="font-size:0.82rem; color:#64748b; margin-bottom:4px;">
+            📍 ${bin.location}
+          </div>
+          <div style="font-size:0.78rem; color:#475569; margin-bottom:6px;">
+            <strong>Accepts:</strong> ${bin.accepted_items || key}
+          </div>
+          <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" style="display:inline-block; font-size:0.8rem; color:#0284c7; font-weight:700; text-decoration:none;">
+            Directions ↗
+          </a>
+        </div>
+      `;
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance).bindPopup(popupHtml);
+      allMarkers.push({ marker, type: 'bin', category: key });
+    });
+  }
+
+  // Filter stations
+  window.filterMapStations = function(category, btn) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    allMarkers.forEach(item => {
+      if (category === 'all') {
+        mapInstance.addLayer(item.marker);
+      } else if (category === 'machine') {
+        if (item.type === 'machine') mapInstance.addLayer(item.marker);
+        else mapInstance.removeLayer(item.marker);
+      } else {
+        if (item.category === category) mapInstance.addLayer(item.marker);
+        else mapInstance.removeLayer(item.marker);
+      }
+    });
+  };
+
+  window.selectMachineFromMap = function(code) {
+    const sel = document.getElementById('active-machine-select');
+    if (sel) {
+      sel.value = code;
+      sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      sel.style.borderColor = 'var(--leaf)';
+    }
+  };
+
+  // ── Smart Disposal Action ─────────────────────────────────────────
+  window.executeSmartDisposal = async function() {
+    const btn = document.getElementById('btn-deposit-waste');
+    if (!window.currentDepositItems || window.currentDepositItems.length === 0) {
+      alert('No recyclable waste items in list to deposit. Use "+ Add More" to add items.');
+      return;
+    }
+
+    const machineSelect = document.getElementById('active-machine-select');
+    const machineCode = machineSelect ? machineSelect.value : 'RVM-01-CAMPUS-NORTH';
+
+    // Prepare payload with explicit quantities and weights
+    const payloadItems = window.currentDepositItems.map(itm => ({
+      waste_category: itm.category_code,
+      item_type: itm.display_name,
+      quantity: itm.quantity,
+      unit_weight_kg: itm.unit_weight_kg,
+      weight_kg: round(itm.unit_weight_kg * itm.quantity, 3),
+      points: itm.points_per_item * itm.quantity
+    }));
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>⚙️ Verifying & Depositing...</span>';
+
+    try {
+      const resp = await fetch('/api/disposal/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: window.currentDepositor.userId,
+          machine_id: machineCode,
+          items: payloadItems,
+          detection_id: {{ detection_id | tojson }}
+        })
+      });
+
+      const res = await resp.json();
+      if (!res.success) {
+        alert(res.error || 'Disposal transaction failed.');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="hatch-icon">📥</span><span>Deposit & Claim Rewards</span>';
+        return;
+      }
+
+      // Play celebratory confetti
+      try {
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
+        }
+      } catch (e) {
+        console.log('Confetti error:', e);
+      }
+
+      // Update UI balance
+      window.currentDepositor.balance = res.new_balance;
+      const balEl = document.getElementById('current-depositor-balance');
+      if (balEl) balEl.innerHTML = `Balance: <strong>${res.new_balance}</strong> pts`;
+
+      // Update topbar points pills immediately
+      document.querySelectorAll('.user-points-badge').forEach(el => {
+        el.innerHTML = `<span>⭐</span> <span>${res.new_balance} pts</span>`;
+      });
+
+      // Fill modal
+      document.getElementById('modal-pts-earned').textContent = `+${res.points_earned} pts`;
+      document.getElementById('modal-items-count').textContent = res.items_deposited;
+      document.getElementById('modal-items-weight').textContent = `${res.total_weight_kg} kg`;
+      document.getElementById('modal-new-balance').textContent = `${res.new_balance} pts`;
+
+      // Badges
+      const badgesContainer = document.getElementById('modal-new-badges');
+      const badgesList = document.getElementById('modal-badges-list');
+      if (res.badges_unlocked && res.badges_unlocked.length > 0) {
+        badgesList.innerHTML = '';
+        res.badges_unlocked.forEach(b => {
+          badgesList.innerHTML += `
+            <div style="background:rgba(251,191,36,0.12); border:1px solid #fbbf24; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:10px; text-align:left;">
+              <span style="font-size:1.5rem;">${b.icon || '🏆'}</span>
+              <div>
+                <strong style="color:#ffffff; font-size:0.9rem;">${b.name}</strong>
+                <span style="display:block; font-size:0.75rem; color:#fde68a;">${b.description}</span>
+              </div>
+            </div>
+          `;
+        });
+        badgesContainer.style.display = 'block';
+      } else {
+        badgesContainer.style.display = 'none';
+      }
+
+      // Open Success Modal
+      document.getElementById('rvm-success-modal').classList.add('show');
+      btn.innerHTML = `<span>✅ Deposited (+${res.points_earned} pts)</span>`;
+      btn.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+
+    } catch (err) {
+      alert('Network error connecting to Smart Machine: ' + err);
+      btn.disabled = false;
+      btn.innerHTML = '<span class="hatch-icon">📥</span><span>Deposit & Claim Rewards</span>';
+    }
+  };
+
+  window.closeSuccessModal = function() {
+    document.getElementById('rvm-success-modal').classList.remove('show');
+  };
+
+  // ── QR Scanner & User Switcher ────────────────────────────────────
+  window.openQRScanModal = function() {
+    document.getElementById('rvm-qr-modal').classList.add('show');
+    const inp = document.getElementById('qr-token-input');
+    if (inp) inp.focus();
+  };
+
+  window.closeQRModal = function() {
+    document.getElementById('rvm-qr-modal').classList.remove('show');
+  };
+
+  window.lookupQRToken = async function() {
+    const inp = document.getElementById('qr-token-input');
+    const msg = document.getElementById('qr-lookup-msg');
+    const token = inp.value.trim();
+    if (!token) return;
+
+    msg.style.display = 'block';
+    msg.style.color = '#94a3b8';
+    msg.textContent = 'Verifying QR code...';
+
+    try {
+      const resp = await fetch(`/api/user/qr-lookup?token=${encodeURIComponent(token)}`);
+      const res = await resp.json();
+      if (!res.success) {
+        msg.style.color = '#f87171';
+        msg.textContent = res.error || 'Invalid QR code token.';
+        return;
+      }
+
+      window.currentDepositor = {
+        userId: res.user_id,
+        username: res.username,
+        balance: res.current_balance
+      };
+
+      document.getElementById('current-depositor-name').textContent = res.username;
+      document.getElementById('current-depositor-balance').innerHTML = `Balance: <strong>${res.current_balance}</strong> pts`;
+
+      msg.style.color = '#34d399';
+      msg.textContent = `✅ Connected: ${res.username} (${res.level_title})`;
+
+      setTimeout(() => {
+        closeQRModal();
+      }, 1000);
+
+    } catch (err) {
+      msg.style.color = '#f87171';
+      msg.textContent = 'Error: ' + err;
+    }
+  };
+
+  window.onQuickUserSelected = function(select) {
+    const opt = select.options[select.selectedIndex];
+    const userId = parseInt(opt.value);
+    const username = opt.getAttribute('data-username');
+
+    window.currentDepositor.userId = userId;
+    window.currentDepositor.username = username;
+
+    document.getElementById('current-depositor-name').textContent = username;
+    closeQRModal();
+  };
+
+  // Initial render of deposit items
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      renderDepositItems();
+      initResultMap();
+    });
+  } else {
+    renderDepositItems();
+    setTimeout(initResultMap, 300);
+  }
+})();
+</script>
 {% endblock %}

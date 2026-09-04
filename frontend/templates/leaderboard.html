@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Recycling Champions Leaderboard — RecycleMe{% endblock %}
+{% block content %}
+<style>
+  .lb-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 10px 0 60px;
+  }
+  .lb-header {
+    text-align: center;
+    margin-bottom: 35px;
+  }
+  .lb-header h1 {
+    font-family: var(--display);
+    font-size: 2.8rem;
+    color: #0f172a;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .lb-header p {
+    color: var(--muted-light);
+    font-size: 1.05rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ── Podium Top 3 ───────────────────────────────────────────── */
+  .podium-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    gap: 18px;
+    align-items: flex-end;
+    margin-bottom: 35px;
+  }
+  @media (max-width: 720px) {
+    .podium-grid { grid-template-columns: 1fr; }
+  }
+
+  .podium-card {
+    background: #ffffff;
+    backdrop-filter: blur(20px);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 22px;
+    padding: 24px 18px;
+    text-align: center;
+    position: relative;
+    transition: transform 0.25s;
+  }
+  .podium-card:hover { transform: translateY(-4px); }
+  .podium-card.first {
+    background: linear-gradient(145deg, #fffbeb 0%, #ffffff 100%);
+    border-color: #fbbf24;
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.15);
+    order: 2;
+    padding-top: 32px;
+    padding-bottom: 30px;
+  }
+  .podium-card.second {
+    background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
+    border-color: #94a3b8;
+    order: 1;
+  }
+  .podium-card.third {
+    background: linear-gradient(145deg, #fff7ed 0%, #ffffff 100%);
+    border-color: #d97706;
+    order: 3;
+  }
+
+  .podium-rank-badge {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+  }
+  .podium-avatar {
+    width: 60px; height: 60px;
+    border-radius: 18px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    background: rgba(15, 23, 42, 0.06);
+  }
+  .podium-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+  .podium-pts {
+    font-size: 1.6rem;
+    font-weight: 800;
+    font-family: var(--display);
+    color: var(--leaf);
+    margin-bottom: 6px;
+  }
+
+  /* Table */
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  .lb-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--muted-light);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .lb-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #0f172a;
+  }
+  .lb-table tr:hover td {
+    background: #f8fafc;
+  }
+  .lb-table tr.current-user-row td {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(46, 229, 157, 0.3);
+  }
+  .rank-pill {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .rank-1 { background: #fbbf24; color: #000; }
+  .rank-2 { background: #94a3b8; color: #000; }
+  .rank-3 { background: #d97706; color: #fff; }
+  .rank-other { background: rgba(15, 23, 42, 0.08); color: var(--muted-light); }
+</style>
+
+<div class="lb-wrapper">
+  <div class="lb-header">
+    <h1>🏆 Campus Recycling Leaderboard</h1>
+    <p>Honoring the top eco-warriors and recyclers helping eliminate campus landfill waste.</p>
+  </div>
+
+  <!-- Podium Top 3 -->
+  {% if leaderboard|length >= 3 %}
+  <div class="podium-grid">
+    <!-- 2nd Place -->
+    <div class="podium-card second">
+      <div class="podium-rank-badge">🥈</div>
+      <div class="podium-avatar">👤</div>
+      <div class="podium-name">{{ leaderboard[1].username }}</div>
+      <div style="font-size:0.78rem; color:var(--muted-light); margin-bottom:8px;">{{ leaderboard[1].level_title }}</div>
+      <div class="podium-pts">{{ leaderboard[1].total_points }} pts</div>
+      <div style="font-size:0.8rem; color:var(--muted);">{{ leaderboard[1].total_items_recycled }} items · {{ leaderboard[1].total_weight_kg }} kg</div>
+    </div>
+
+    <!-- 1st Place -->
+    <div class="podium-card first">
+      <div class="podium-rank-badge">🥇</div>
+      <div class="podium-avatar" style="border:2px solid #fbbf24;">👑</div>
+      <div class="podium-name" style="color:#fbbf24; font-size:1.3rem;">{{ leaderboard[0].username }}</div>
+      <div style="font-size:0.82rem; color:#fde68a; margin-bottom:8px;">{{ leaderboard[0].level_title }}</div>
+      <div class="podium-pts" style="color:#fbbf24; font-size:2rem;">{{ leaderboard[0].total_points }} pts</div>
+      <div style="font-size:0.82rem; color:var(--muted-light);">{{ leaderboard[0].total_items_recycled }} items · {{ leaderboard[0].total_weight_kg }} kg</div>
+    </div>
+
+    <!-- 3rd Place -->
+    <div class="podium-card third">
+      <div class="podium-rank-badge">🥉</div>
+      <div class="podium-avatar">👤</div>
+      <div class="podium-name">{{ leaderboard[2].username }}</div>
+      <div style="font-size:0.78rem; color:var(--muted-light); margin-bottom:8px;">{{ leaderboard[2].level_title }}</div>
+      <div class="podium-pts">{{ leaderboard[2].total_points }} pts</div>
+      <div style="font-size:0.8rem; color:var(--muted);">{{ leaderboard[2].total_items_recycled }} items · {{ leaderboard[2].total_weight_kg }} kg</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Full Leaderboard Table -->
+  <section class="panel reveal">
+    <div class="section-head">
+      <h2>All Rankings</h2>
+      <span style="color:var(--muted-light); font-size:0.88rem;">Updated in Real-Time</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Recycler</th>
+            <th>Level Tier</th>
+            <th>Items Recycled</th>
+            <th>Weight</th>
+            <th>Streak</th>
+            <th>Total Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in leaderboard %}
+          <tr class="{% if session.get('username') == u.username %}current-user-row{% endif %}">
+            <td>
+              <span class="rank-pill {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-other{% endif %}">
+                {{ loop.index }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ u.username }}</strong>
+              {% if session.get('username') == u.username %}
+              <span style="font-size:0.75rem; color:var(--leaf); font-weight:700;">(You)</span>
+              {% endif %}
+            </td>
+            <td><span style="font-size:0.82rem; color:var(--muted-light);">{{ u.level_title }}</span></td>
+            <td>{{ u.total_items_recycled }}</td>
+            <td>{{ u.total_weight_kg }} kg</td>
+            <td><span style="color:#f87171; font-weight:700;">🔥 {{ u.streak_days }}d</span></td>
+            <td><strong style="color:var(--leaf); font-size:1.05rem;">{{ u.total_points }} pts</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

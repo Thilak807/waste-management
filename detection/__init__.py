@@ -125,6 +125,7 @@ def detect_waste(
                     "category": rec["category"],
                     "recommendation": rec["recommendation"],
                     "disposal_tips": rec["disposal_tips"],
+                    "what_can_be_made": rec.get("what_can_be_made", []),
                     "bin_type": bin_info.get("bin_type", "General Waste Bin"),
                     "bin_location": bin_info.get("location", "Main Gate"),
                     "bin_facility": bin_info.get("facility_name", ""),
@@ -174,6 +175,7 @@ def detect_waste(
                     "category": rec["category"],
                     "recommendation": rec["recommendation"],
                     "disposal_tips": rec["disposal_tips"],
+                    "what_can_be_made": rec.get("what_can_be_made", []),
                     "bin_type": bin_info.get("bin_type", "General Waste Bin"),
                     "bin_location": bin_info.get("location", "Main Gate"),
                     "bin_facility": bin_info.get("facility_name", ""),
@@ -233,6 +235,7 @@ def detect_waste(
         "primary_class": primary["class_name"] if primary else None,
         "primary_confidence": primary["confidence"] if primary else None,
         "primary_recommendation": primary["recommendation"] if primary else None,
+        "what_can_be_made": primary.get("what_can_be_made", []) if primary else [],
     }
 
 
