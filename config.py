@@ -17,9 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # Roboflow Dataset
 # ---------------------------------------------------------------------------
 
-DATASET_DIR = Path(
-    r"C:\Users\Lenovo\Downloads\waste_detection_small_dataset"
-)
+DATASET_DIR = BASE_DIR / "waste_detection_small_dataset"
 
 # The downloaded dataset contains:
 #
@@ -229,8 +227,10 @@ BIN_LOCATIONS = {
         "operating_hours": "24/7 Accessible",
         "lat": 12.9722,
         "lng": 77.5941,
-        "color": "#38bdf8",
-        "icon": "🧴"
+        "color": "#0ea5e9",
+        "icon": "🧴",
+        "fill_percentage": 38,
+        "fill_status": "Available",
     },
     "paper": {
         "bin_type": "Paper & Cardboard Hub",
@@ -242,8 +242,10 @@ BIN_LOCATIONS = {
         "operating_hours": "07:00 AM - 10:00 PM",
         "lat": 12.9712,
         "lng": 77.5952,
-        "color": "#4ade80",
-        "icon": "📄"
+        "color": "#22c55e",
+        "icon": "📄",
+        "fill_percentage": 54,
+        "fill_status": "Moderate",
     },
     "cardboard": {
         "bin_type": "Cardboard & Packaging Station",
@@ -255,8 +257,10 @@ BIN_LOCATIONS = {
         "operating_hours": "08:00 AM - 08:00 PM",
         "lat": 12.9719,
         "lng": 77.5958,
-        "color": "#fb923c",
-        "icon": "📦"
+        "color": "#f97316",
+        "icon": "📦",
+        "fill_percentage": 71,
+        "fill_status": "Near Full",
     },
     "glass": {
         "bin_type": "Glass Recycling Center",
@@ -268,8 +272,10 @@ BIN_LOCATIONS = {
         "operating_hours": "24/7 Accessible",
         "lat": 12.9725,
         "lng": 77.5949,
-        "color": "#facc15",
-        "icon": "🍶"
+        "color": "#eab308",
+        "icon": "🍶",
+        "fill_percentage": 22,
+        "fill_status": "Available",
     },
     "metal": {
         "bin_type": "Metal & E-Waste Facility",
@@ -281,8 +287,10 @@ BIN_LOCATIONS = {
         "operating_hours": "08:00 AM - 07:00 PM",
         "lat": 12.9708,
         "lng": 77.5938,
-        "color": "#c084fc",
-        "icon": "🔩"
+        "color": "#8b5cf6",
+        "icon": "🔩",
+        "fill_percentage": 47,
+        "fill_status": "Available",
     },
     "organic": {
         "bin_type": "Organic Compost Station",
@@ -294,8 +302,10 @@ BIN_LOCATIONS = {
         "operating_hours": "06:00 AM - 11:00 PM",
         "lat": 12.9705,
         "lng": 77.5950,
-        "color": "#34d399",
-        "icon": "🌿"
+        "color": "#16a34a",
+        "icon": "🌿",
+        "fill_percentage": 63,
+        "fill_status": "Moderate",
     },
     "other": {
         "bin_type": "General Waste & Sorting Station",
@@ -307,8 +317,10 @@ BIN_LOCATIONS = {
         "operating_hours": "24/7 Accessible",
         "lat": 12.9730,
         "lng": 77.5935,
-        "color": "#e879f9",
-        "icon": "🗑️"
+        "color": "#64748b",
+        "icon": "🗑️",
+        "fill_percentage": 29,
+        "fill_status": "Available",
     },
     "trash": {
         "bin_type": "General Waste Bin",
@@ -320,8 +332,10 @@ BIN_LOCATIONS = {
         "operating_hours": "24/7 Accessible",
         "lat": 12.9730,
         "lng": 77.5935,
-        "color": "#e879f9",
-        "icon": "🗑️"
+        "color": "#64748b",
+        "icon": "🗑️",
+        "fill_percentage": 29,
+        "fill_status": "Available",
     }
 }
 

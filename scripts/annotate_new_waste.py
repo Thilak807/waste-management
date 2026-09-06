@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 
 # Base dataset directory
-DATASET_DIR = Path(r"C:\Users\Lenovo\Downloads\waste_detection_small_dataset")
+DATASET_DIR = Path(__file__).resolve().parent.parent / "waste_detection_small_dataset"
 WASTE_DIR = Path(r"C:\Users\Lenovo\Downloads\waste")
 
 # Classes in dataset:

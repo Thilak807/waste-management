@@ -7,12 +7,13 @@ without retraining. Extend RECOMMENDATIONS when adding new classes.
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 # Default guidance and upcycling ideas per waste class (admin can override via database)
 DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     "plastic": {
         "category": "Recyclable – Plastic",
+        "current_use": "Extensively manufactured into single-use water & soda bottles, food takeaway tubs, detergent jugs, flexible wrappers, and cosmetic dispensers due to its lightweight moisture-barrier properties.",
         "recommendation": (
             "Place clean plastic items in the appropriate recycling bin. "
             "Rinse containers, remove caps if required by local rules, and "
@@ -63,6 +64,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "paper": {
         "category": "Recyclable – Paper",
+        "current_use": "Heavily utilized across universities, offices, and printing presses for textbooks, newspapers, exam sheets, notebook stationery, parcel inserts, and shopping bags.",
         "recommendation": (
             "Keep paper dry and place it in the paper recycling collection. "
             "Remove plastic sleeves, binders, and food-stained paper before recycling."
@@ -112,6 +114,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "cardboard": {
         "category": "Recyclable – Cardboard & Packaging",
+        "current_use": "The backbone of e-commerce delivery and warehouse logistics, used universally for corrugated mailing boxes, heavy-duty shipping cartons, and retail product packaging.",
         "recommendation": (
             "Flatten all cardboard boxes to save space. Remove heavy packaging tape and plastic wrapping before recycling."
         ),
@@ -153,6 +156,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "glass": {
         "category": "Recyclable – Glass",
+        "current_use": "Universally chosen for impermeable, sterile, and non-reactive storage of soda and juice bottles, wine bottles, food jars, cosmetic vessels, and pharmaceutical vials.",
         "recommendation": (
             "Separate glass from general waste and send it to a glass recycling "
             "facility. Empty and rinse bottles and jars; remove lids if needed."
@@ -196,6 +200,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "metal": {
         "category": "Recyclable – Metal & E-Waste",
+        "current_use": "Widely deployed for carbonated soda and energy drink cans, preserved food tins, aerosol cans, cooking foil, electronics casings, and electrical wiring.",
         "recommendation": (
             "Place recyclable metal containers in the metal recycling collection. "
             "Rinse cans and crush them if space is limited. Deposit electronic items in e-waste bins."
@@ -238,6 +243,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "organic": {
         "category": "Compostable – Organic & Food Waste",
+        "current_use": "Generated daily from canteen meal preparation, food scraps, fruit and vegetable peels, tea bags, coffee grounds, and discarded garden clippings.",
         "recommendation": (
             "Place fruit peels, food leftovers, vegetable waste, and coffee grounds into the green organic compost bin."
         ),
@@ -273,6 +279,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "other": {
         "category": "General / Non-Recyclable Waste",
+        "current_use": "Found in multi-layer metallized chip sachets, composite coffee cups, thermal receipts, and blended synthetic wrappers with inseparable material layers.",
         "recommendation": (
             "Place non-recyclable multi-layer packaging, sanitary items, and mixed household trash into the general waste bin."
         ),
@@ -302,6 +309,7 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
     },
     "trash": {
         "category": "General Waste",
+        "current_use": "Single-use mixed packaging, soiled paper towels, contaminated hygiene products, and unrecyclable municipal debris.",
         "recommendation": (
             "Place general non-recyclable waste in the municipal sorting bin."
         ),
@@ -326,6 +334,58 @@ DEFAULT_RECOMMENDATIONS: Dict[str, Dict[str, Any]] = {
 }
 
 
+MATERIAL_GUIDE: Dict[str, Dict[str, str]] = {
+    "plastic": {
+        "segregation_bin": "Plastic / Dry Waste Bin",
+        "recycling_method": "Rinse PET bottles, remove residual liquid, and deposit in the plastic stream or reverse vending machine. Material is shredded into flakes and spun into polyester fibre.",
+        "future_summary": "Clothes, bags, furniture, construction materials",
+        "smart_action": "Deposit in vending machine → Receive reward",
+    },
+    "paper": {
+        "segregation_bin": "Paper Recycling Bin",
+        "recycling_method": "Keep dry, remove plastic covers, and place in the paper stream. Fibres are de-inked and re-pulped into new stationery.",
+        "future_summary": "Notebooks, packaging, insulation, seed paper",
+        "smart_action": "Place in paper hub → Track campus diversion",
+    },
+    "cardboard": {
+        "segregation_bin": "Cardboard / Packaging Bin",
+        "recycling_method": "Flatten boxes, strip heavy tape, and keep dry. Corrugated fibre is re-pulped into new cartons and organisers.",
+        "future_summary": "Shipping boxes, pet furniture, garden mulch",
+        "smart_action": "Drop at packaging station → Reduce landfill load",
+    },
+    "glass": {
+        "segregation_bin": "Glass Recycling Bin",
+        "recycling_method": "Rinse bottles and jars; keep ceramics out of the stream. Cullet is melted and recast with no quality loss.",
+        "future_summary": "New bottles, tiles, insulation, road aggregate",
+        "smart_action": "Glass depot drop-off → Closed-loop recycling",
+    },
+    "metal": {
+        "segregation_bin": "Metal / Can Recycling Bin",
+        "recycling_method": "Rinse and crush cans. Aluminium is remelted with ~95% energy savings versus virgin ore.",
+        "future_summary": "New cans, bicycle frames, tools, cookware",
+        "smart_action": "Insert cans in vending machine → Cash or points",
+    },
+    "organic": {
+        "segregation_bin": "Organic / Wet Waste Bin",
+        "recycling_method": "Keep plastics out. Food scraps are composted or digested into biogas and soil amendment.",
+        "future_summary": "Compost, biogas, bio-fertiliser",
+        "smart_action": "Cafeteria compost station → Campus garden reuse",
+    },
+    "other": {
+        "segregation_bin": "General Waste / Sorting Bin",
+        "recycling_method": "Send mixed residuals to the sorting station. Recoverable fractions are diverted; remainder may become RDF.",
+        "future_summary": "RDF pellets, road additive, barrier panels",
+        "smart_action": "Main-gate sorting → Residual recovery",
+    },
+    "trash": {
+        "segregation_bin": "General Waste Bin",
+        "recycling_method": "Separate recyclables first. Residual waste goes to municipal processing.",
+        "future_summary": "Energy recovery, construction aggregate",
+        "smart_action": "Municipal bin → Residual processing",
+    },
+}
+
+
 def get_recommendation(class_name: str, custom_map: Optional[Dict] = None) -> Dict[str, Any]:
     """
     Map a predicted waste class to recycling guidance and what can be made from it.
@@ -335,30 +395,48 @@ def get_recommendation(class_name: str, custom_map: Optional[Dict] = None) -> Di
         custom_map: Optional override dictionary from the database.
 
     Returns:
-        Dict with keys: category, recommendation, disposal_tips, what_can_be_made.
+        Dict with keys: category, current_use, recommendation, disposal_tips, what_can_be_made.
     """
     key = (class_name or "").strip().lower()
-    source = custom_map if custom_map else DEFAULT_RECOMMENDATIONS
 
-    if key in source:
-        entry = source[key]
+    # Look up in custom overrides, fallback to default catalogue
+    entry = None
+    if custom_map and key in custom_map:
+        entry = custom_map[key]
+    elif key in DEFAULT_RECOMMENDATIONS:
+        entry = DEFAULT_RECOMMENDATIONS[key]
+
+    guide = MATERIAL_GUIDE.get(key, MATERIAL_GUIDE["other"])
+
+    if entry:
+        default_entry = DEFAULT_RECOMMENDATIONS.get(key, {})
         return {
             "class_name": key,
-            "category": entry.get("category", f"Recyclable – {key.title()}"),
-            "recommendation": entry.get("recommendation", "Follow local recycling guidelines."),
-            "disposal_tips": entry.get("disposal_tips", ""),
-            "what_can_be_made": entry.get("what_can_be_made", DEFAULT_RECOMMENDATIONS.get(key, {}).get("what_can_be_made", [])),
+            "category": entry.get("category") or default_entry.get("category", f"Recyclable – {key.title()}"),
+            "current_use": entry.get("current_use") or default_entry.get("current_use", "Widely used in everyday commercial and consumer packaging."),
+            "recommendation": entry.get("recommendation") or default_entry.get("recommendation", "Follow local recycling guidelines."),
+            "disposal_tips": entry.get("disposal_tips") or default_entry.get("disposal_tips", ""),
+            "what_can_be_made": entry.get("what_can_be_made") or default_entry.get("what_can_be_made", []),
+            "segregation_bin": entry.get("segregation_bin") or guide["segregation_bin"],
+            "recycling_method": entry.get("recycling_method") or guide["recycling_method"],
+            "future_summary": entry.get("future_summary") or guide["future_summary"],
+            "smart_action": entry.get("smart_action") or guide["smart_action"],
         }
 
     return {
         "class_name": key or "unknown",
         "category": "Unknown / General Waste",
+        "current_use": "Mixed or unrecognized everyday waste item.",
         "recommendation": (
             "Class not recognized in the recommendation database. "
             "Dispose according to local municipal waste rules."
         ),
         "disposal_tips": "Contact your local recycling center for guidance.",
         "what_can_be_made": DEFAULT_RECOMMENDATIONS.get("other", {}).get("what_can_be_made", []),
+        "segregation_bin": guide["segregation_bin"],
+        "recycling_method": guide["recycling_method"],
+        "future_summary": guide["future_summary"],
+        "smart_action": guide["smart_action"],
     }
 
 

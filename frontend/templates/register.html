@@ -16,13 +16,13 @@
   .reg-back:hover { color: var(--leaf-light); }
 
   .reg-card {
-    background: #ffffff;
+    background: rgba(12, 33, 23, 0.78);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 24px;
     padding: 38px 36px;
-    box-shadow: 0 15px 40px rgba(0,0,0,.06);
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
   }
 
   .reg-card-head { text-align: center; margin-bottom: 30px; }
@@ -36,24 +36,24 @@
   @keyframes pop { from{opacity:0;transform:scale(.6)} to{opacity:1;transform:scale(1)} }
   .reg-card-head h1 {
     font-family: var(--display); font-size: 2rem;
-    color: #0f172a; margin-bottom: 6px; font-weight: 700;
+    color: #ffffff; margin-bottom: 6px; font-weight: 700;
   }
   .reg-card-head p { color: var(--muted-light); font-size: .92rem; }
 
   .form-group { margin-bottom: 20px; }
   .form-group label {
     display: block; font-weight: 600; font-size: .9rem;
-    color: #0f172a; margin-bottom: 8px;
+    color: #ffffff; margin-bottom: 8px;
   }
   .form-group input {
     width: 100%; padding: 13px 16px;
-    border: 1.5px solid #cbd5e1; border-radius: 12px;
-    font-size: .95rem; font-family: var(--font); color: #0f172a;
-    background: #ffffff; transition: all .2s;
+    border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 12px;
+    font-size: .95rem; font-family: var(--font); color: #ffffff;
+    background: rgba(255, 255, 255, 0.06); transition: all .2s;
   }
   .form-group input:focus {
     outline: none; border-color: var(--leaf);
-    background: rgba(15, 23, 42, 0.08); box-shadow: 0 0 0 3px rgba(46,229,157,.25);
+    background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 3px rgba(46,229,157,.25);
   }
   .form-group input::placeholder { color: var(--muted); }
 
@@ -72,13 +72,13 @@
 
   .reg-footer {
     text-align: center; margin-top: 24px; padding-top: 20px;
-    border-top: 1px solid rgba(15, 23, 42, 0.08); font-size: .92rem; color: var(--muted);
+    border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: .92rem; color: var(--muted);
   }
   .reg-footer a { color: var(--leaf); font-weight: 700; text-decoration: none; }
   .reg-footer a:hover { text-decoration: underline; color: var(--leaf-light); }
 
   .strength-bar {
-    height: 5px; background: rgba(15, 23, 42, 0.08); border-radius: 3px;
+    height: 5px; background: rgba(255, 255, 255, 0.1); border-radius: 3px;
     margin-top: 8px; overflow: hidden;
   }
   .strength-fill { height: 100%; width: 0%; transition: width .3s, background .3s; border-radius: 3px; }

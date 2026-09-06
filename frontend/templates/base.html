@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}RecycleMe - Waste Detection{% endblock %}</title>
+  <title>{% block title %}RecycleMe — Waste Detection & Smart Recycling{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <style>
     .topbar-new {
-      background: rgba(255, 255, 255, 0.9) !important;
+      background: rgba(7, 22, 15, 0.85) !important;
       backdrop-filter: blur(18px) saturate(180%);
       -webkit-backdrop-filter: blur(18px) saturate(180%);
-      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding: 0 24px;
       position: sticky;
       top: 0;
-      z-index: 100;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      z-index: 1000;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.45);
     }
 
     .topbar-content {
@@ -37,7 +37,7 @@
       text-decoration: none;
       font-family: var(--display);
       font-weight: 700;
-      color: #0f172a !important;
+      color: #ffffff !important;
       font-size: 1.45rem;
       transition: all 0.3s var(--ease);
     }
@@ -62,7 +62,7 @@
     .topbar-nav {
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 24px;
       list-style: none;
       margin: 0;
       padding: 0;
@@ -70,20 +70,20 @@
 
     .topbar-nav a {
       text-decoration: none;
-      color: var(--muted-light);
-      font-weight: 600;
+      color: var(--muted);
+      font-weight: 500;
       font-size: 0.95rem;
       transition: all 0.25s var(--ease);
       position: relative;
-      padding: 6px 2px;
+      padding: 6px 4px;
     }
 
     .topbar-nav a:hover {
-      color: var(--leaf);
+      color: var(--leaf-light);
     }
 
     .topbar-nav a.active {
-      color: var(--leaf-deep);
+      color: var(--leaf);
       font-weight: 700;
     }
 
@@ -96,13 +96,32 @@
       height: 2.5px;
       background: var(--leaf);
       border-radius: 2px;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 10px var(--leaf);
     }
 
     .user-menu {
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 16px;
+    }
+
+    .user-points-badge {
+      text-decoration: none;
+      background: rgba(251, 191, 36, 0.16);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      color: #fbbf24;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s var(--ease);
+    }
+    .user-points-badge:hover {
+      background: rgba(251, 191, 36, 0.25);
+      transform: translateY(-1px);
     }
 
     .user-label {
@@ -111,22 +130,22 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      background: #f1f5f9;
+      background: rgba(255, 255, 255, 0.06);
       padding: 6px 14px;
       border-radius: 20px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .user-label strong {
-      color: var(--leaf-deep);
-      font-weight: 700;
+      color: var(--leaf);
+      font-weight: 600;
     }
 
     .logout-btn {
       padding: 8px 18px;
-      background: #ffffff;
-      color: #0f172a;
-      border: 1px solid #cbd5e1;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 10px;
       font-size: 0.9rem;
       font-weight: 600;
@@ -135,20 +154,18 @@
       font-family: var(--font);
       text-decoration: none;
       display: inline-block;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
     }
 
     .logout-btn:hover {
-      background: linear-gradient(135deg, var(--leaf) 0%, var(--leaf-deep) 100%);
-      color: #ffffff;
+      background: linear-gradient(135deg, var(--leaf-deep) 0%, #15803d 100%);
       border-color: transparent;
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       .topbar-nav {
-        gap: 15px;
+        gap: 14px;
       }
       .topbar-nav a {
         font-size: 0.85rem;
@@ -159,7 +176,7 @@
     }
   </style>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"></canvas>
   <div class="bg-mesh" aria-hidden="true">
     <span class="orb orb-a"></span>
@@ -176,13 +193,13 @@
       </a>
       <nav>
         <ul class="topbar-nav">
-          <li><a href="{{ url_for('index') }}#studio-section" class="nav-scroll-link active" data-target="studio-section">Dashboard</a></li>
-          <li><a href="{{ url_for('index') }}#machine-section" class="nav-scroll-link" data-target="machine-section" style="color:var(--leaf); font-weight:700;">🤖 Smart Machine</a></li>
-          <li><a href="{{ url_for('index') }}#rewards-section" class="nav-scroll-link" data-target="rewards-section" style="color:#d97706; font-weight:700;">⭐ Rewards</a></li>
-          <li><a href="{{ url_for('index') }}#live-section" class="nav-scroll-link" data-target="live-section" style="color:#ef4444; font-weight:700;">🔴 Live</a></li>
-          <li><a href="{{ url_for('index') }}#leaderboard-section" class="nav-scroll-link" data-target="leaderboard-section">🏆 Leaderboard</a></li>
-          <li><a href="{{ url_for('index') }}#bins-section" class="nav-scroll-link" data-target="bins-section">🗑️ Bins</a></li>
-          <li><a href="{{ url_for('index') }}#history-section" class="nav-scroll-link" data-target="history-section">History</a></li>
+          <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a></li>
+          <li><a href="{{ url_for('smart_machine_view') }}" class="{% if request.endpoint == 'smart_machine_view' %}active{% endif %}" style="color:var(--leaf);font-weight:700;">🤖 Smart Machine</a></li>
+          <li><a href="{{ url_for('rewards') }}" class="{% if request.endpoint == 'rewards' %}active{% endif %}" style="color:#fbbf24;font-weight:700;">⭐ Rewards</a></li>
+          <li><a href="{{ url_for('live_detection') }}" class="{% if request.endpoint == 'live_detection' %}active{% endif %}" style="color:#f87171;font-weight:700;">🔴 Live</a></li>
+          <li><a href="{{ url_for('leaderboard_view') }}" class="{% if request.endpoint == 'leaderboard_view' %}active{% endif %}">🏆 Leaderboard</a></li>
+          <li><a href="{{ url_for('bin_locations') }}" class="{% if request.endpoint == 'bin_locations' %}active{% endif %}">🗑️ Bins</a></li>
+          <li><a href="{{ url_for('history') }}" class="{% if request.endpoint in ['history', 'history_detail'] %}active{% endif %}">History</a></li>
           <li>
             <a
               href="{% if session.get('admin') %}{{ url_for('admin_dashboard') }}{% else %}{{ url_for('admin_login') }}{% endif %}"
@@ -193,12 +210,12 @@
       </nav>
       <div class="user-menu">
         {% if session.get('admin') or session.get('user') %}
-          <a href="{{ url_for('index') }}#rewards-section" class="user-points-badge" style="text-decoration:none; background:#fef3c7; border:1px solid #fde68a; color:#b45309; padding:6px 14px; border-radius:20px; font-weight:700; font-size:0.88rem; display:inline-flex; align-items:center; gap:6px;">
+          <a href="{{ url_for('rewards') }}" class="user-points-badge" title="View your rewards balance">
             <span>⭐</span>
             <span>{{ user_points or 0 }} pts</span>
           </a>
           <span class="user-label">
-            <span>{{ session.get('username') or 'User' }}</span>
+            <span>👤 <strong>{{ session.get('username') or 'User' }}</strong></span>
           </span>
           {% if session.get('admin') %}
             <a href="{{ url_for('admin_logout') }}" class="logout-btn">Logout</a>

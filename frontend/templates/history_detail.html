@@ -3,13 +3,13 @@
 {% block content %}
 <style>
   .metrics-eval-panel {
-    background: #ffffff;
+    background: rgba(12, 33, 23, 0.78);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 24px;
     padding: 24px 28px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.05);
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
     margin-bottom: 30px;
   }
   .metrics-grid {
@@ -18,8 +18,8 @@
     gap: 14px;
   }
   .metric-box {
-    background: #f8fafc;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 16px 18px;
     transition: transform 0.2s ease, border-color 0.2s ease;
@@ -217,32 +217,4 @@
     <p>No recommendation — nothing was classified.</p>
   {% endif %}
 </section>
-
-<!-- ── What Can Be Made From This Material Showcase ── -->
-{% if upcycling_products %}
-<section class="panel reveal delay-3" style="margin-top: 24px;">
-  <div class="section-head">
-    <h2><span>💡</span> What Can Be Made From {{ record.primary_class|title }}?</h2>
-    <span style="font-size:0.82rem; font-weight:700; color:var(--leaf); background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); padding:4px 12px; border-radius:16px;">
-      ✨ Upcycling Ideas
-    </span>
-  </div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
-    {% for p in upcycling_products %}
-      <div style="background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; padding: 16px; display: flex; flex-direction: column;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-          <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.08); display: flex; align-items: center; justify-content: center; font-size: 1.35rem;">
-            {{ p.icon }}
-          </div>
-          <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 12px; background: rgba(15, 23, 42, 0.06); color: var(--muted-light);">
-            {{ p.badge }}
-          </span>
-        </div>
-        <strong style="font-size: 0.95rem; color: #0f172a; margin-bottom: 4px;">{{ p.title }}</strong>
-        <p style="font-size: 0.82rem; color: var(--muted-light); line-height: 1.45; margin: 0; flex: 1;">{{ p.description }}</p>
-      </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
 {% endblock %}

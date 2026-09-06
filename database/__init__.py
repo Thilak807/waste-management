@@ -218,43 +218,41 @@ def init_db() -> None:
                     (name, cid, f"{name.title()} waste category"),
                 )
 
-        # Seed recommendations
+        # Seed recommendations (ensure all default classes exist)
         from recommendations import DEFAULT_RECOMMENDATIONS
 
-        cur = conn.execute("SELECT COUNT(*) AS c FROM recommendations")
-        if cur.fetchone()["c"] == 0:
-            for cls, data in DEFAULT_RECOMMENDATIONS.items():
-                conn.execute(
-                    """
-                    INSERT INTO recommendations (class_name, category, recommendation, disposal_tips, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (cls, data["category"], data["recommendation"], data["disposal_tips"], _now()),
-                )
+        for cls, data in DEFAULT_RECOMMENDATIONS.items():
+            conn.execute(
+                """
+                INSERT INTO recommendations (class_name, category, recommendation, disposal_tips, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(class_name) DO NOTHING
+                """,
+                (cls, data["category"], data["recommendation"], data["disposal_tips"], _now()),
+            )
 
-        # Seed default configurable waste points rules
-        cur = conn.execute("SELECT COUNT(*) AS c FROM waste_points_rules")
-        if cur.fetchone()["c"] == 0:
-            default_rules = [
-                ("plastic_bottle", "Plastic Bottle", 5, 50.0, 0.035, "🧴", "#38bdf8"),
-                ("plastic_container", "Plastic Container", 7, 60.0, 0.060, "📦", "#60a5fa"),
-                ("metal_can", "Metal Can", 10, 80.0, 0.045, "🥫", "#c084fc"),
-                ("aluminum_can", "Aluminum Can", 10, 90.0, 0.015, "🥤", "#a855f7"),
-                ("paper", "Paper Waste", 3, 30.0, 0.020, "📄", "#4ade80"),
-                ("cardboard", "Cardboard Box", 4, 40.0, 0.150, "📦", "#fb923c"),
-                ("glass_bottle", "Glass Bottle", 6, 45.0, 0.280, "🍶", "#facc15"),
-                ("organic", "Organic / Compost", 2, 20.0, 0.100, "🌿", "#34d399"),
-                ("other", "Other Recyclable Waste", 2, 25.0, 0.050, "♻️", "#e879f9"),
-            ]
-            for code, name, pts, p_kg, w_kg, icon, col in default_rules:
-                conn.execute(
-                    """
-                    INSERT INTO waste_points_rules
-                    (category_code, display_name, points_per_item, points_per_kg, base_weight_kg, icon, color, is_active, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
-                    """,
-                    (code, name, pts, p_kg, w_kg, icon, col, _now()),
-                )
+        # Seed default configurable waste points rules (ensure all categories exist)
+        default_rules = [
+            ("plastic_bottle", "Plastic Bottle", 5, 50.0, 0.035, "🧴", "#38bdf8"),
+            ("plastic_container", "Plastic Container", 7, 60.0, 0.060, "📦", "#60a5fa"),
+            ("metal_can", "Metal Can", 10, 80.0, 0.045, "🥫", "#c084fc"),
+            ("aluminum_can", "Aluminum Can", 10, 90.0, 0.015, "🥤", "#a855f7"),
+            ("paper", "Paper Waste", 3, 30.0, 0.020, "📄", "#4ade80"),
+            ("cardboard", "Cardboard Box", 4, 40.0, 0.150, "📦", "#fb923c"),
+            ("glass_bottle", "Glass Bottle", 6, 45.0, 0.280, "🍶", "#facc15"),
+            ("organic", "Organic / Compost", 2, 20.0, 0.100, "🌿", "#34d399"),
+            ("other", "Other Recyclable Waste", 2, 25.0, 0.050, "♻️", "#e879f9"),
+        ]
+        for code, name, pts, p_kg, w_kg, icon, col in default_rules:
+            conn.execute(
+                """
+                INSERT INTO waste_points_rules
+                (category_code, display_name, points_per_item, points_per_kg, base_weight_kg, icon, color, is_active, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                ON CONFLICT(category_code) DO NOTHING
+                """,
+                (code, name, pts, p_kg, w_kg, icon, col, _now()),
+            )
 
         # Seed smart reverse vending machines (RVM)
         cur = conn.execute("SELECT COUNT(*) AS c FROM smart_machines")
@@ -538,8 +536,21 @@ def get_waste_points_map() -> Dict[str, Dict[str, Any]]:
         mapping["plastic"] = mapping["plastic_bottle"]
     if "metal_can" in mapping and "metal" not in mapping:
         mapping["metal"] = mapping["metal_can"]
-    if "cardboard" in mapping and "paper" in mapping:
-        pass
+    if "glass_bottle" in mapping and "glass" not in mapping:
+        mapping["glass"] = mapping["glass_bottle"]
+    if "cardboard" not in mapping and "paper" in mapping:
+        mapping["cardboard"] = mapping.get("cardboard_box") or mapping["paper"]
+    if "aluminum_can" in mapping and "aluminum" not in mapping:
+        mapping["aluminum"] = mapping["aluminum_can"]
+    if "other" in mapping and "trash" not in mapping:
+        mapping["trash"] = mapping["other"]
+    # Reverse aliases for convenience
+    if "glass" in mapping and "glass_bottle" not in mapping:
+        mapping["glass_bottle"] = mapping["glass"]
+    if "plastic" in mapping and "plastic_bottle" not in mapping:
+        mapping["plastic_bottle"] = mapping["plastic"]
+    if "metal" in mapping and "metal_can" not in mapping:
+        mapping["metal_can"] = mapping["metal"]
     return mapping
 
 

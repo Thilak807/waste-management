@@ -209,6 +209,8 @@ def index():
     return render_template(
         "index.html",
         history=history,
+        model_info=model_status(),
+        stats=detection_stats(),
         smart_machines=smart_machines,
         points_rules=points_rules,
         registered_users=registered_users,
@@ -227,22 +229,18 @@ def index():
 def live_detection():
     if not session.get("user") and not session.get("admin"):
         return redirect(url_for("login"))
-    if request.args.get("standalone"):
-        return render_template("live_detection.html")
-    return redirect(url_for("index", _anchor="live-section"))
+    return render_template("live_detection.html")
 
 
 @app.route("/bin_locations")
 def bin_locations():
     if not session.get("user") and not session.get("admin"):
         return redirect(url_for("login"))
-    if request.args.get("standalone"):
-        return render_template(
-            "bin_locations.html",
-            bin_locations=config.BIN_LOCATIONS,
-            map_center=getattr(config, "MAP_DEFAULT_CENTER", {"lat": 12.9716, "lng": 77.5946, "zoom": 17}),
-        )
-    return redirect(url_for("index", _anchor="bins-section"))
+    return render_template(
+        "bin_locations.html",
+        bin_locations=config.BIN_LOCATIONS,
+        map_center=getattr(config, "MAP_DEFAULT_CENTER", {"lat": 12.9716, "lng": 77.5946, "zoom": 17}),
+    )
 
 
 @app.route("/api/bin_locations")
@@ -293,24 +291,39 @@ def detect():
         model_mode=result["model_mode"],
     )
 
-    # Calculate estimated recyclable items & reward points from active rules
+    # Calculate estimated recyclable items & reward points + cash payout from active rules
+    CASH_RATES = {
+        "plastic": 2.00,
+        "metal": 5.00,
+        "glass": 3.50,
+        "cardboard": 4.00,
+        "paper": 1.50,
+        "organic": 1.00,
+        "other": 1.00,
+        "trash": 0.50,
+    }
+
     rules_map = get_waste_points_map()
     deposit_items = []
     total_est_points = 0
     total_est_weight = 0.0
+    total_est_cash = 0.0
 
     for d in result.get("detections", []):
         cls_name = d.get("class_name", "other").lower()
         rule = rules_map.get(cls_name) or rules_map.get("other", {"points_per_item": 5, "base_weight_kg": 0.05, "display_name": "Recyclable Item", "icon": "🗑️"})
         pts = rule.get("points_per_item", 5)
         w = rule.get("base_weight_kg", 0.05)
+        cash = CASH_RATES.get(cls_name, 2.00)
         total_est_points += pts
         total_est_weight += w
+        total_est_cash += cash
         deposit_items.append({
             "class_name": cls_name,
             "display_name": rule.get("display_name", cls_name.title()),
             "icon": rule.get("icon", "🗑️"),
             "points": pts,
+            "cash_rate": cash,
             "weight_kg": round(w, 3),
             "quantity": 1,
         })
@@ -320,13 +333,16 @@ def detect():
         rule = rules_map.get(cls_name) or rules_map.get("other", {"points_per_item": 5, "base_weight_kg": 0.05, "display_name": "Recyclable Item", "icon": "🗑️"})
         pts = rule.get("points_per_item", 5)
         w = rule.get("base_weight_kg", 0.05)
+        cash = CASH_RATES.get(cls_name, 2.00)
         total_est_points = pts
         total_est_weight = w
+        total_est_cash = cash
         deposit_items.append({
             "class_name": cls_name,
             "display_name": rule.get("display_name", cls_name.title()),
             "icon": rule.get("icon", "🗑️"),
             "points": pts,
+            "cash_rate": cash,
             "weight_kg": round(w, 3),
             "quantity": 1,
         })
@@ -335,13 +351,18 @@ def detect():
     registered_users = list_users()
     waste_points_rules = get_waste_points_rules()
 
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes.accept_json:
+    wants_json = (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or (request.accept_mimetypes.best_match(["text/html", "application/json"]) == "application/json")
+    )
+    if wants_json:
         result["detection_id"] = det_id
         result["upload_url"] = f"uploads/{fname}"
         result["bin_location"] = bin_location
         result["deposit_items"] = deposit_items
         result["total_est_points"] = total_est_points
         result["total_est_weight"] = round(total_est_weight, 3)
+        result["total_est_cash"] = round(total_est_cash, 2)
         return jsonify(result)
 
     history = list_detections(limit=10)
@@ -349,7 +370,7 @@ def detect():
     user_profile = get_user_rewards_profile(user_id) if user_id else None
 
     return render_template(
-        "index.html",
+        "result.html",
         result=result,
         upload_url=f"uploads/{fname}",
         detection_id=det_id,
@@ -358,6 +379,7 @@ def detect():
         deposit_items=deposit_items,
         total_est_points=total_est_points,
         total_est_weight=round(total_est_weight, 3),
+        total_est_cash=round(total_est_cash, 2),
         smart_machines=smart_machines,
         registered_users=registered_users,
         points_rules=waste_points_rules,
@@ -373,10 +395,8 @@ def detect():
 def history():
     if not session.get("user") and not session.get("admin"):
         return redirect(url_for("login"))
-    if request.args.get("standalone"):
-        records = list_detections(limit=100)
-        return render_template("history.html", records=records)
-    return redirect(url_for("index", _anchor="history-section"))
+    records = list_detections(limit=100)
+    return render_template("history.html", records=records)
 
 
 @app.route("/history/<int:detection_id>")
@@ -423,9 +443,6 @@ def rewards():
     if not session.get("user") and not session.get("admin"):
         return redirect(url_for("login"))
 
-    if not request.args.get("standalone"):
-        return redirect(url_for("index", _anchor="rewards-section"))
-
     user_id = session.get("user_id")
     username = session.get("username")
     if not user_id and username:
@@ -454,8 +471,6 @@ def rewards():
 @app.route("/machine")
 def smart_machine_view():
     """Interactive Reverse Vending Machine (RVM) Kiosk interface."""
-    if not request.args.get("standalone"):
-        return redirect(url_for("index", _anchor="machine-section"))
 
     machines = list_smart_machines()
     points_rules = get_waste_points_rules(only_active=True)
@@ -478,8 +493,6 @@ def smart_machine_view():
 @app.route("/leaderboard")
 def leaderboard_view():
     """Campus & Community Recycling Leaderboard."""
-    if not request.args.get("standalone"):
-        return redirect(url_for("index", _anchor="leaderboard-section"))
     leaderboard = get_leaderboard(50)
     return render_template("leaderboard.html", leaderboard=leaderboard)
 

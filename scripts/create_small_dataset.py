@@ -12,9 +12,7 @@ SOURCE = Path(
 )
 
 # New smaller dataset
-DEST = Path(
-    r"C:\Users\Lenovo\Downloads\waste_detection_small_dataset"
-)
+DEST = Path(__file__).resolve().parent.parent / "waste_detection_small_dataset"
 
 # Number of images we want
 TRAIN_COUNT = 800

@@ -11,7 +11,7 @@
   }
   .hist-header h1 {
     font-family: var(--display); font-size: 2.2rem;
-    color: #0f172a; margin: 0;
+    color: #ffffff; margin: 0;
   }
   .hist-header p { color: var(--muted-light); font-size: .95rem; margin: 4px 0 0; }
 
@@ -19,12 +19,12 @@
 
   /* ── Search + filter bar ──────────────────────────────────── */
   .filter-bar {
-    background: #ffffff;
+    background: rgba(12, 33, 23, 0.75);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 18px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.04);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
     padding: 18px 22px;
     display: flex; align-items: center; gap: 14px;
     margin-bottom: 24px; flex-wrap: wrap;
@@ -34,9 +34,9 @@
   }
   .search-wrap input {
     width: 100%; padding: 11px 16px 11px 40px;
-    border: 1.5px solid #cbd5e1; border-radius: 10px;
+    border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 10px;
     font-size: .9rem; font-family: var(--font);
-    background: #ffffff; color: #0f172a;
+    background: rgba(255, 255, 255, 0.06); color: #ffffff;
     transition: all .2s;
   }
   .search-wrap input:focus { outline: none; border-color: var(--leaf); background: rgba(255,255,255,0.1); box-shadow: 0 0 0 3px rgba(46,229,157,0.2); }
@@ -46,9 +46,9 @@
   }
 
   .filter-select {
-    padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px;
-    font-size: .9rem; font-family: var(--font); background: #ffffff;
-    color: #0f172a; cursor: pointer; transition: all .2s;
+    padding: 11px 14px; border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 10px;
+    font-size: .9rem; font-family: var(--font); background: rgba(12, 33, 23, 0.9);
+    color: #ffffff; cursor: pointer; transition: all .2s;
   }
   .filter-select:focus { outline: none; border-color: var(--leaf); }
 
@@ -59,26 +59,26 @@
 
   /* ── Table ────────────────────────────────────────────────── */
   .hist-table-wrap {
-    background: #ffffff;
+    background: rgba(12, 33, 23, 0.75);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.05);
+    box-shadow: 0 16px 40px rgba(0,0,0,.4);
     overflow: hidden;
   }
   table {
     width: 100%; border-collapse: collapse; font-size: .92rem;
   }
   thead th {
-    background: #f8fafc;
+    background: rgba(7, 24, 16, 0.85);
     color: var(--muted-light); font-weight: 700; font-size: .82rem;
     text-transform: uppercase; letter-spacing: .06em;
     padding: 16px 18px; text-align: left; white-space: nowrap;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
   tbody tr {
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     transition: background .2s;
   }
   tbody tr:last-child { border-bottom: none; }
@@ -101,12 +101,12 @@
     background: rgba(46, 229, 157, 0.12); color: var(--leaf);
   }
   .conf-pill.low { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
-  .conf-pill.none { background: rgba(15, 23, 42, 0.06); color: var(--muted); }
+  .conf-pill.none { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
 
   /* Mode tag */
   .mode-tag {
     font-size: .78rem; padding: 3px 8px;
-    border-radius: 4px; background: rgba(15, 23, 42, 0.06); color: var(--muted-light);
+    border-radius: 4px; background: rgba(255, 255, 255, 0.08); color: var(--muted-light);
     text-transform: uppercase; font-weight: 600;
   }
   .mode-tag.live { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
@@ -157,9 +157,9 @@
     display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
   }
   .stat-chip {
-    background: #ffffff;
+    background: rgba(12, 33, 23, 0.75);
     backdrop-filter: blur(16px);
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 14px; padding: 14px 20px;
     box-shadow: 0 8px 24px rgba(0,0,0,.3); flex: 1 1 120px; text-align: center;
   }

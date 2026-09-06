@@ -123,6 +123,7 @@ def detect_waste(
                     "confidence_pct": round(score * 100, 1),
                     "bbox": {"x1": box_xyxy[0], "y1": box_xyxy[1], "x2": box_xyxy[2], "y2": box_xyxy[3]},
                     "category": rec["category"],
+                    "current_use": rec.get("current_use", ""),
                     "recommendation": rec["recommendation"],
                     "disposal_tips": rec["disposal_tips"],
                     "what_can_be_made": rec.get("what_can_be_made", []),
@@ -173,6 +174,7 @@ def detect_waste(
                     "confidence_pct": round(score * 100, 1),
                     "bbox": {"x1": box_xyxy[0], "y1": box_xyxy[1], "x2": box_xyxy[2], "y2": box_xyxy[3]},
                     "category": rec["category"],
+                    "current_use": rec.get("current_use", ""),
                     "recommendation": rec["recommendation"],
                     "disposal_tips": rec["disposal_tips"],
                     "what_can_be_made": rec.get("what_can_be_made", []),
@@ -209,6 +211,30 @@ def detect_waste(
                 "lng": b_info.get("lng"),
             }
 
+    # Build comprehensive per-item breakdown (for every unique detected item)
+    unique_waste_items = []
+    for cls in category_counts.keys():
+        class_dets = [d for d in detections if d["class_name"] == cls]
+        best_det = class_dets[0] if class_dets else {}
+        b_info = config.BIN_LOCATIONS.get(cls, config.BIN_LOCATIONS.get("other", {}))
+        rec_data = get_recommendation(cls, recommendations_map)
+        unique_waste_items.append({
+            "class_name": cls,
+            "display_name": cls.title(),
+            "count": len(class_dets),
+            "max_confidence_pct": best_det.get("confidence_pct", 95.0),
+            "category": rec_data.get("category", f"Recyclable – {cls.title()}"),
+            "current_use": rec_data.get("current_use", "Widely used in everyday commercial and consumer packaging."),
+            "recommendation": rec_data.get("recommendation", "Follow campus recycling and segregation guidelines."),
+            "disposal_tips": rec_data.get("disposal_tips", ""),
+            "what_can_be_made": rec_data.get("what_can_be_made", []),
+            "segregation_bin": rec_data.get("segregation_bin", "Campus Recycling Bin"),
+            "recycling_method": rec_data.get("recycling_method", ""),
+            "future_summary": rec_data.get("future_summary", ""),
+            "smart_action": rec_data.get("smart_action", ""),
+            "bin_info": b_info,
+        })
+
     result_path = None
     if save_result:
         out_name = f"result_{image_path.stem}.jpg"
@@ -221,6 +247,28 @@ def detect_waste(
     primary = detections[0] if detections else None
     status = model_status()
 
+    # Fallback if no detections
+    if not unique_waste_items and primary:
+        cls = primary["class_name"]
+        rec_data = get_recommendation(cls, recommendations_map)
+        b_info = config.BIN_LOCATIONS.get(cls, config.BIN_LOCATIONS.get("other", {}))
+        unique_waste_items.append({
+            "class_name": cls,
+            "display_name": cls.title(),
+            "count": 1,
+            "max_confidence_pct": primary.get("confidence_pct", 95.0),
+            "category": rec_data.get("category", f"Recyclable – {cls.title()}"),
+            "current_use": rec_data.get("current_use", "Widely used in everyday commercial and consumer packaging."),
+            "recommendation": rec_data.get("recommendation", "Follow campus recycling and segregation guidelines."),
+            "disposal_tips": rec_data.get("disposal_tips", ""),
+            "what_can_be_made": rec_data.get("what_can_be_made", []),
+            "segregation_bin": rec_data.get("segregation_bin", "Campus Recycling Bin"),
+            "recycling_method": rec_data.get("recycling_method", ""),
+            "future_summary": rec_data.get("future_summary", ""),
+            "smart_action": rec_data.get("smart_action", ""),
+            "bin_info": b_info,
+        })
+
     return {
         "success": True,
         "model_mode": mode,
@@ -232,6 +280,7 @@ def detect_waste(
         "category_counts": category_counts,
         "unique_categories": list(category_counts.keys()),
         "unique_bins": list(unique_bins.values()),
+        "unique_waste_items": unique_waste_items,
         "primary_class": primary["class_name"] if primary else None,
         "primary_confidence": primary["confidence"] if primary else None,
         "primary_recommendation": primary["recommendation"] if primary else None,
