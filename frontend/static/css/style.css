@@ -1193,3 +1193,189 @@ body.has-pointer .cursor-glow { opacity: 1; }
   .action-grid-2x2 { grid-template-columns: 1fr; }
   .container { width: calc(100% - 1.5rem); }
 }
+
+/* ==========================================================================
+   RecycleMe — Unified Deep Green Presentation Theme
+   ========================================================================== */
+:root {
+  --bg-dark: #071b14;
+  --bg-deep: #0a241a;
+  --bg0: #102d21;
+  --bg1: #0d261c;
+  --ink: #eefcf4;
+  --ink-pure: #f5fff8;
+  --muted: #8fb0a0;
+  --muted-light: #b6d1c1;
+  --line: rgba(167, 243, 208, 0.14);
+  --line-glow: rgba(52, 211, 153, 0.32);
+  --leaf: #34d399;
+  --leaf-deep: #10b981;
+  --leaf-light: #6ee7b7;
+  --leaf-soft: rgba(52, 211, 153, 0.13);
+  --glass-bg: rgba(13, 38, 28, 0.88);
+  --glass-bg-hover: rgba(18, 54, 39, 0.96);
+  --glass-card: rgba(16, 45, 33, 0.94);
+  --glass-border: rgba(167, 243, 208, 0.16);
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+  --shadow-hover: 0 20px 48px rgba(0, 0, 0, 0.38);
+}
+
+html, body {
+  background-color: var(--bg-dark) !important;
+  color: var(--ink) !important;
+}
+
+body {
+  background-image:
+    linear-gradient(rgba(5, 24, 17, 0.86), rgba(5, 24, 17, 0.94)),
+    url("../images/bg-theme.png"),
+    radial-gradient(ellipse at top right, rgba(16, 185, 129, 0.2), transparent 55%),
+    linear-gradient(180deg, #071b14 0%, #0b2a1d 52%, #071b14 100%) !important;
+  background-size: cover, cover, cover, cover !important;
+  background-attachment: fixed !important;
+}
+
+.bg-mesh {
+  background:
+    radial-gradient(700px 420px at 8% 0%, rgba(16, 185, 129, 0.2), transparent 62%),
+    radial-gradient(650px 420px at 100% 100%, rgba(20, 184, 166, 0.13), transparent 58%),
+    linear-gradient(180deg, rgba(4, 24, 17, 0.35), rgba(4, 24, 17, 0.72)) !important;
+}
+
+.topbar-new, .topbar {
+  background: rgba(4, 24, 17, 0.9) !important;
+  border-bottom-color: rgba(167, 243, 208, 0.14) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28) !important;
+}
+
+.brand-new, .brand, .topbar-nav a, .topbar nav a,
+.hero-title-main, .section-title-wrap h2, .res-header-flex h1,
+.results-section-header h2, .res-card-title, .upcycling-title,
+.kiosk-title-box h3, .podium-name, .bgc-title, .history-table-box td,
+.form-label, label {
+  color: var(--ink-pure) !important;
+}
+
+.topbar-nav a:hover, .topbar-nav a.active, .topbar nav a:hover,
+.topbar nav a.active {
+  color: var(--leaf-light) !important;
+}
+
+.user-label, .hero-metric-box, .jump-pill, .studio-console-card,
+.studio-dropzone, .res-card, .upcycling-item-card, .kiosk-machine-frame,
+.deposit-chamber, .kiosk-session-card, .reward-voucher-card,
+.live-scan-card, .leaderboard-card, .map-card-container,
+.history-audit-card, .metrics-eval-panel, .media-card, .det-card,
+.guidance-card, .bin-guide-card, .station-box, .result-info-card,
+.result-info-cell, .machine-story, .rvm-user-box, .rvm-item-row,
+.session-item-row, .hero-strip-card, .panel, .hero-glass-card,
+.pedestal-box, .pedestal-badge, .loader-card, .glass-action-btn {
+  background: rgba(13, 38, 28, 0.92) !important;
+  color: var(--ink) !important;
+  border-color: rgba(167, 243, 208, 0.15) !important;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22) !important;
+}
+
+.hero-strip-card, .studio-console-card, .kiosk-machine-frame,
+.map-card-container, .history-audit-card, .leaderboard-card,
+.live-scan-card, .hero-glass-card {
+  background: linear-gradient(145deg, rgba(16, 50, 36, 0.97), rgba(8, 29, 21, 0.96)) !important;
+}
+
+.section-title-wrap p, .hero-desc-main, .hm-sub, .upcycling-desc,
+.bgc-location, .map-status-row, .media-card figcaption,
+.rvm-subnote, .u-balance, .item-detail span, .history-table-box td,
+.result-info-cell span {
+  color: var(--muted-light) !important;
+}
+
+.hm-label, .deposit-label, .tot-label, .workflow-step span:last-child,
+.result-info-cell small, .history-table-box th {
+  color: var(--muted) !important;
+}
+
+.studio-mode-switcher, .studio-dropzone, .live-sidebar, .session-items-scroll,
+.hatch-visual, .rvm-totals-bar, .disposal-tips-box, .class-badge-banner,
+.rec-guide-box, .result-info-cell, .machine-story, .map-legend {
+  background: rgba(5, 27, 19, 0.72) !important;
+  border-color: rgba(167, 243, 208, 0.15) !important;
+}
+
+input, select, textarea, .machine-picker-inline,
+.form-group input, .stack-form input, .stack-form textarea, .stack-form select,
+.inline-form input, .inline-form select {
+  background: #0b261b !important;
+  color: var(--ink-pure) !important;
+  border-color: rgba(167, 243, 208, 0.24) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #789889 !important;
+}
+
+.jump-pill, .btn-clear-choice, .logout-btn, .item-btn {
+  background: rgba(16, 50, 36, 0.92) !important;
+  color: var(--ink-pure) !important;
+  border-color: rgba(167, 243, 208, 0.22) !important;
+}
+
+.jump-pill:hover, .item-btn:hover, .btn-clear-choice:hover {
+  background: rgba(24, 75, 54, 0.98) !important;
+  border-color: var(--leaf) !important;
+  color: #ffffff !important;
+}
+
+.res-img-wrap, .media-card img, .history-table-box th {
+  background: #071b14 !important;
+  border-color: rgba(167, 243, 208, 0.14) !important;
+}
+
+.glass-action-btn {
+  background: rgba(16, 50, 36, 0.92) !important;
+  color: var(--ink-pure) !important;
+  border-color: rgba(167, 243, 208, 0.16) !important;
+}
+
+.glass-action-btn:hover {
+  background: rgba(24, 75, 54, 0.98) !important;
+}
+
+.loader-card {
+  background: #0d2b1f !important;
+  border-color: rgba(167, 243, 208, 0.2) !important;
+}
+
+.loading-overlay {
+  background: rgba(1, 13, 9, 0.72) !important;
+}
+
+.history-table-box tr:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+.map-legend, .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: #0d2b1f !important;
+  color: var(--ink-pure) !important;
+  border-color: rgba(167, 243, 208, 0.22) !important;
+}
+
+.leaflet-control-zoom a, .leaflet-bar a {
+  background: #0d2b1f !important;
+  color: var(--ink-pure) !important;
+  border-color: rgba(167, 243, 208, 0.2) !important;
+}
+
+.flash-success {
+  background: rgba(6, 78, 59, 0.8) !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+  color: #a7f3d0 !important;
+}
+
+.flash-error {
+  background: rgba(127, 29, 29, 0.72) !important;
+  color: #fecaca !important;
+}
+
+@media (max-width: 768px) {
+  .topbar-new, .topbar { padding: 0 14px !important; }
+}

@@ -193,6 +193,12 @@
   const resBinIcon = qs("#res-bin-icon");
   const resBinType = qs("#res-bin-type");
   const resBinLocation = qs("#res-bin-location");
+  const infoDetectedItem = qs("#info-detected-item");
+  const infoWasteCategory = qs("#info-waste-category");
+  const infoSegregation = qs("#info-segregation");
+  const infoCurrentUse = qs("#info-current-use");
+  const infoFutureProduct = qs("#info-future-product");
+  const infoSmartAction = qs("#info-smart-action");
   const upcyclingShowcase = qs("#upcycling-showcase");
   const upcyclingMaterialTag = qs("#upcycling-material-tag");
   const upcyclingGrid = qs("#upcycling-products-grid");
@@ -468,6 +474,39 @@
     if (resBinIcon) resBinIcon.textContent = binInfo.icon || "🗑️";
     if (resBinType) resBinType.textContent = binInfo.bin_type || `${clsUpper} Bin`;
     if (resBinLocation) resBinLocation.textContent = binInfo.location || "Campus Center Station";
+
+    const infoByClass = {
+      plastic: {
+        item: "Plastic bottle", category: "Recyclable plastic", segregation: "Plastic / dry waste bin",
+        current: "Plastic flakes and fibres", future: "Clothes, bags, furniture", action: "Deposit in vending machine → receive reward",
+      },
+      paper: {
+        item: "Paper item", category: "Recyclable paper", segregation: "Paper / dry waste bin",
+        current: "Pulp and recycled paper", future: "Notebooks, cartons, packaging", action: "Keep dry and place in paper hub",
+      },
+      cardboard: {
+        item: "Cardboard packaging", category: "Recyclable cardboard", segregation: "Paper / dry waste bin",
+        current: "Recovered fibre pulp", future: "Packaging, boards, furniture", action: "Flatten and send to cardboard station",
+      },
+      glass: {
+        item: "Glass container", category: "Recyclable glass", segregation: "Glass recycling bin",
+        current: "Glass cullet for remelting", future: "New bottles, tiles, insulation", action: "Rinse and deposit carefully",
+      },
+      metal: {
+        item: "Metal can", category: "Recyclable metal", segregation: "Metal / dry waste bin",
+        current: "Recovered aluminium or steel", future: "New cans, parts, fixtures", action: "Deposit at the metal facility",
+      },
+    };
+    const info = infoByClass[cls] || {
+      item: `${clsUpper} waste item`, category: "Special handling required", segregation: "General sorting station",
+      current: "Material recovery and sorting", future: "Recovered composite products", action: "Follow the designated bin guidance",
+    };
+    if (infoDetectedItem) infoDetectedItem.textContent = info.item;
+    if (infoWasteCategory) infoWasteCategory.textContent = info.category;
+    if (infoSegregation) infoSegregation.textContent = info.segregation;
+    if (infoCurrentUse) infoCurrentUse.textContent = info.current;
+    if (infoFutureProduct) infoFutureProduct.textContent = info.future;
+    if (infoSmartAction) infoSmartAction.textContent = info.action;
 
     // Render "What Can Be Made From This?" Showcase
     renderUpcyclingShowcase(cls, data.what_can_be_made || primaryDet.what_can_be_made);
@@ -863,12 +902,23 @@
       Object.keys(bins).forEach((key) => {
         const b = bins[key];
         if (b.lat && b.lng) {
-          const marker = L.marker([b.lat, b.lng]).addTo(campusMasterMap);
+          const fillLevels = { plastic: 68, paper: 42, cardboard: 76, glass: 54, metal: 34, organic: 61, other: 27 };
+          const fill = fillLevels[key] || 45;
+          const markerIcon = L.divIcon({
+            className: "smart-bin-marker",
+            html: `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${b.color || "#059669"};border:3px solid #fff;box-shadow:0 4px 12px rgba(15,23,42,.28);display:grid;place-items:center;"><span style="transform:rotate(45deg);font-size:15px;">${b.icon || "🗑️"}</span></div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 34],
+            popupAnchor: [0, -30],
+          });
+          const marker = L.marker([b.lat, b.lng], { icon: markerIcon }).addTo(campusMasterMap);
           marker.bindPopup(`
             <div style="font-family:sans-serif; min-width:200px;">
               <strong style="color:#059669; font-size:14px;">${b.icon || "🗑️"} ${b.bin_type || key.toUpperCase()}</strong>
               <div style="font-size:12px; color:#475569; margin-top:3px;">${b.facility_name || ""}</div>
               <div style="font-size:11px; color:#64748b;">${b.location || ""}</div>
+              <div style="font-size:11px; color:#475569; margin-top:6px;">Fill status: <strong>${fill}%</strong> · ${fill > 70 ? "Schedule collection" : "Available capacity"}</div>
+              <div style="height:5px;background:#e2e8f0;border-radius:4px;margin-top:4px;"><div style="width:${fill}%;height:100%;background:${fill > 70 ? "#f59e0b" : "#10b981"};border-radius:4px;"></div></div>
               <div style="font-size:11px; color:#10b981; font-weight:bold; margin-top:4px;">⏱️ ${b.operating_hours || "24/7 Open"}</div>
             </div>
           `);

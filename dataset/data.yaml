@@ -1,17 +1,15 @@
-# YOLO dataset configuration for waste detection
-# Class IDs must match label files (0-indexed)
+path: .
 
-path: dataset  # dataset root (relative to project root)
-train: images/train
-val: images/val
-test: images/test
+train: train/images
+val: valid/images
+test: test/images
 
-# Number of classes
-nc: 4
+nc: 6
 
-# Class names (extend this list when adding new waste types)
 names:
-  0: plastic
-  1: paper
+  0: Trash
+  1: cardboard
   2: glass
   3: metal
+  4: paper
+  5: plastic

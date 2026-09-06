@@ -13,7 +13,7 @@ SOURCE = Path(
 
 # New smaller dataset
 DEST = Path(
-    r"C:\Users\Lenovo\Downloads\waste_detection_small_dataset"
+    str(Path(__file__).resolve().parents[1] / "dataset")
 )
 
 # Number of images we want

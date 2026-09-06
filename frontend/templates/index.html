@@ -613,6 +613,71 @@
   .thumb-img-small {
     width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1;
   }
+
+  /* Presentation-focused dashboard enhancements */
+  .workflow-rail {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 26px;
+    padding-top: 22px; border-top: 1px solid #e2e8f0;
+  }
+  .workflow-step { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .workflow-step:not(:last-child)::after { content: '→'; color: #94a3b8; font-size: 1.1rem; margin-left: auto; }
+  .workflow-icon {
+    width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+    background: #ecfdf5; color: #047857; flex: 0 0 auto; font-size: 0.9rem;
+  }
+  .workflow-step span:last-child { color: #475569; font-size: 0.72rem; font-weight: 700; line-height: 1.25; }
+  .map-card-container { position: relative; overflow: hidden; }
+  .map-card-container::before {
+    content: ''; position: absolute; inset: 0 0 auto; height: 4px;
+    background: linear-gradient(90deg, #059669, #38bdf8, #f59e0b);
+  }
+  .map-status-row { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 0.82rem; }
+  .map-status-row strong { color: #0f172a; }
+  .map-legend {
+    position: absolute; z-index: 5; right: 38px; bottom: 182px; background: rgba(255,255,255,.96);
+    border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; box-shadow: 0 5px 18px rgba(15,23,42,.12);
+    font-size: .76rem; color: #475569;
+  }
+  .map-legend-title { font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+  .map-legend span { display: inline-flex; align-items: center; gap: 5px; margin-right: 8px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .machine-story {
+    display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 14px; align-items: center;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px 18px; margin-bottom: 22px;
+  }
+  .machine-story-step { text-align: center; color: #475569; font-size: .78rem; font-weight: 700; }
+  .machine-story-step strong { display: block; color: #0f172a; font-size: .86rem; margin-top: 4px; }
+  .machine-visual {
+    min-height: 138px; position: relative; display: flex; align-items: center; justify-content: center;
+    gap: 12px; border-radius: 15px; background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+  }
+  .machine-visual .person { font-size: 3.1rem; transform: scaleX(-1); }
+  .machine-visual .bottle { font-size: 2rem; transform: rotate(-22deg); }
+  .machine-body {
+    width: 74px; height: 104px; border-radius: 13px 13px 7px 7px; background: linear-gradient(160deg,#0f766e,#064e3b);
+    border: 3px solid #34d399; position: relative; box-shadow: 0 8px 18px rgba(6,78,59,.24);
+  }
+  .machine-body::before { content: 'RVM'; position: absolute; top: 12px; left: 0; right: 0; text-align: center; color: #d1fae5; font-size: .65rem; font-weight: 800; }
+  .machine-slot { position: absolute; left: 12px; right: 12px; top: 36px; height: 14px; background: #022c22; border-radius: 5px; }
+  .machine-screen { position: absolute; left: 13px; right: 13px; bottom: 11px; height: 19px; background: #a7f3d0; border-radius: 4px; }
+  .cash-reward { font-size: 1.65rem; color: #b45309; white-space: nowrap; }
+  .result-info-card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-top: 18px;
+  }
+  .result-info-card h3 { margin: 0 0 12px; font-size: 1rem; color: #0f172a; }
+  .result-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .result-info-cell { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
+  .result-info-cell small { display:block; color:#64748b; font-size:.69rem; text-transform:uppercase; font-weight:800; letter-spacing:.04em; margin-bottom:4px; }
+  .result-info-cell span { color:#334155; font-size:.8rem; line-height:1.35; }
+  @media (max-width: 900px) {
+    .workflow-rail { grid-template-columns: repeat(3, 1fr); }
+    .workflow-step:nth-child(3)::after, .workflow-step:last-child::after { display: none; }
+    .map-legend { position: static; display: inline-block; margin: -12px 0 16px; }
+  }
+  @media (max-width: 600px) {
+    .workflow-rail, .result-info-grid { grid-template-columns: 1fr 1fr; }
+    .machine-story { grid-template-columns: 1fr; }
+  }
 </style>
 
 <!-- =========================================================================
@@ -639,6 +704,14 @@
           <a class="jump-pill" href="#leaderboard-section"><span>🏆</span> Leaderboard</a>
           <a class="jump-pill" href="#bins-section"><span>🗑️</span> Campus Bins</a>
           <a class="jump-pill" href="#history-section"><span>📜</span> History</a>
+        </div>
+        <div class="workflow-rail" aria-label="Smart recycling workflow">
+          <div class="workflow-step"><span class="workflow-icon">📷</span><span>Waste image</span></div>
+          <div class="workflow-step"><span class="workflow-icon">✦</span><span>AI detection</span></div>
+          <div class="workflow-step"><span class="workflow-icon">🗑️</span><span>Segregation</span></div>
+          <div class="workflow-step"><span class="workflow-icon">📍</span><span>Bin location</span></div>
+          <div class="workflow-step"><span class="workflow-icon">♻️</span><span>Recycling</span></div>
+          <div class="workflow-step"><span class="workflow-icon">⭐</span><span>Reward</span></div>
         </div>
       </div>
       <div>
@@ -753,6 +826,18 @@
           <div class="res-img-wrap">
             <img id="res-annotated-img" alt="YOLO Annotated Output" src="" />
           </div>
+
+          <div class="result-info-card" aria-label="Detected waste information">
+            <h3>♻️ Material intelligence card</h3>
+            <div class="result-info-grid">
+              <div class="result-info-cell"><small>Detected item</small><span id="info-detected-item">Plastic bottle</span></div>
+              <div class="result-info-cell"><small>Waste category</small><span id="info-waste-category">Recyclable plastic</span></div>
+              <div class="result-info-cell"><small>Proper segregation</small><span id="info-segregation">Plastic / dry waste bin</span></div>
+              <div class="result-info-cell"><small>Current use</small><span id="info-current-use">Plastic flakes and fibres</span></div>
+              <div class="result-info-cell"><small>Future useful product</small><span id="info-future-product">Clothes, bags, furniture</span></div>
+              <div class="result-info-cell"><small>Smart action</small><span id="info-smart-action">Deposit in vending machine → receive reward</span></div>
+            </div>
+          </div>
           <div class="class-badge-banner">
             <div>
               <span style="font-size:0.75rem; text-transform:uppercase; color:#64748b; display:block;">Primary Material</span>
@@ -810,7 +895,7 @@
 <section class="landing-section" id="machine-section" aria-label="Smart Reverse Vending Machine">
   <div class="section-title-wrap">
     <div class="section-eyebrow"><span class="dot"></span> Feature 2 · Automated Deposit</div>
-    <h2>🤖 Smart Reverse Vending <span>Machine Kiosk</span></h2>
+    <h2>🤖 Smart Recycling <span>Vending Machine</span></h2>
     <p>Deposit bottles, aluminium cans, and containers into the smart chamber. Instantly verify weight, log transactions, and earn reward points.</p>
   </div>
 
@@ -828,6 +913,12 @@
           {% endfor %}
         </select>
       </div>
+    </div>
+
+    <div class="machine-story" aria-label="Bottle to cash process">
+      <div class="machine-story-step"><div class="machine-visual"><span class="person">🧑</span><span class="bottle">🧴</span><span style="color:#059669;font-size:1.4rem;">→</span></div><strong>1 · Insert bottle</strong>Place a clean plastic bottle in the hatch.</div>
+      <div class="machine-story-step"><div class="machine-visual"><div class="machine-body"><span class="machine-slot"></span><span class="machine-screen"></span></div></div><strong>2 · Verify &amp; recycle</strong>Weight and material sensors validate the deposit.</div>
+      <div class="machine-story-step"><div class="machine-visual"><span class="cash-reward">+15 pts<br/>💵</span></div><strong>3 · Reward dispensed</strong>Points are added instantly to your eco wallet.</div>
     </div>
 
     <div class="kiosk-main-grid">
@@ -1096,6 +1187,13 @@
     </div>
 
     <div id="campus-master-map"></div>
+    <div class="map-legend">
+      <div class="map-legend-title">Bin network legend</div>
+      <span><i class="legend-dot" style="background:#38bdf8"></i> Plastic</span>
+      <span><i class="legend-dot" style="background:#4ade80"></i> Paper</span>
+      <span><i class="legend-dot" style="background:#facc15"></i> Glass</span>
+      <span><i class="legend-dot" style="background:#a855f7"></i> Metal</span>
+    </div>
 
     <div class="stations-grid">
       {% for key, b in bin_locations.items() %}
