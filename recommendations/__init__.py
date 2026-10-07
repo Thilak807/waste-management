@@ -386,57 +386,116 @@ MATERIAL_GUIDE: Dict[str, Dict[str, str]] = {
 }
 
 
+# Synonyms and aliases mapping to canonical categories
+CLASS_ALIASES = {
+    "bottle": "plastic",
+    "plastic_bottle": "plastic",
+    "plastic_container": "plastic",
+    "plastic_cup": "plastic",
+    "wrapper": "plastic",
+    "foil_wrapper": "plastic",
+    "can": "metal",
+    "metal_can": "metal",
+    "aluminum_can": "metal",
+    "aluminium_can": "metal",
+    "tin": "metal",
+    "tin_can": "metal",
+    "box": "cardboard",
+    "cardboard_box": "cardboard",
+    "carton": "cardboard",
+    "shipping_box": "cardboard",
+    "paper_cup": "paper",
+    "paper_napkin": "paper",
+    "newspaper": "paper",
+    "book": "paper",
+    "glass_bottle": "glass",
+    "glass_jar": "glass",
+    "jar": "glass",
+    "wine_glass": "glass",
+    "food": "organic",
+    "food_waste": "organic",
+    "banana": "organic",
+    "apple": "organic",
+    "compost": "organic",
+    "debris": "other",
+    "trash": "trash",
+    "general": "other",
+}
+
+
+def normalize_class_name(name: str) -> str:
+    """Map any class name or alias to its canonical category key."""
+    if not name:
+        return "other"
+    key = str(name).strip().lower().replace("-", "_").replace(" ", "_")
+    return CLASS_ALIASES.get(key, key)
+
+
 def get_recommendation(class_name: str, custom_map: Optional[Dict] = None) -> Dict[str, Any]:
     """
-    Map a predicted waste class to recycling guidance and what can be made from it.
+    Map a predicted waste class to rich recycling guidance, upcycling ideas, and circular actions.
 
     Args:
-        class_name: Predicted class (e.g. 'plastic').
+        class_name: Predicted class (e.g. 'plastic', 'bottle', 'cardboard').
         custom_map: Optional override dictionary from the database.
 
     Returns:
-        Dict with keys: category, current_use, recommendation, disposal_tips, what_can_be_made.
+        Dict with keys: class_name, category, current_use, recommendation, disposal_tips,
+        what_can_be_made, segregation_bin, recycling_method, future_summary, smart_action.
     """
-    key = (class_name or "").strip().lower()
+    raw_key = (class_name or "").strip().lower()
+    canonical_key = normalize_class_name(raw_key)
 
-    # Look up in custom overrides, fallback to default catalogue
-    entry = None
-    if custom_map and key in custom_map:
-        entry = custom_map[key]
-    elif key in DEFAULT_RECOMMENDATIONS:
-        entry = DEFAULT_RECOMMENDATIONS[key]
+    # Base recommendation from default catalogue (canonical or raw key)
+    default_entry = (
+        DEFAULT_RECOMMENDATIONS.get(canonical_key)
+        or DEFAULT_RECOMMENDATIONS.get(raw_key)
+        or DEFAULT_RECOMMENDATIONS.get("other", {})
+    )
 
-    guide = MATERIAL_GUIDE.get(key, MATERIAL_GUIDE["other"])
+    # Material guide lookup
+    guide = (
+        MATERIAL_GUIDE.get(canonical_key)
+        or MATERIAL_GUIDE.get(raw_key)
+        or MATERIAL_GUIDE.get("other", {
+            "segregation_bin": "General Waste / Sorting Bin",
+            "recycling_method": "Place in appropriate campus segregation stream for processing.",
+            "future_summary": "Circular upcycled goods and resource recovery",
+            "smart_action": "Segregate item → Deposit at campus hub",
+        })
+    )
 
-    if entry:
-        default_entry = DEFAULT_RECOMMENDATIONS.get(key, {})
-        return {
-            "class_name": key,
-            "category": entry.get("category") or default_entry.get("category", f"Recyclable – {key.title()}"),
-            "current_use": entry.get("current_use") or default_entry.get("current_use", "Widely used in everyday commercial and consumer packaging."),
-            "recommendation": entry.get("recommendation") or default_entry.get("recommendation", "Follow local recycling guidelines."),
-            "disposal_tips": entry.get("disposal_tips") or default_entry.get("disposal_tips", ""),
-            "what_can_be_made": entry.get("what_can_be_made") or default_entry.get("what_can_be_made", []),
-            "segregation_bin": entry.get("segregation_bin") or guide["segregation_bin"],
-            "recycling_method": entry.get("recycling_method") or guide["recycling_method"],
-            "future_summary": entry.get("future_summary") or guide["future_summary"],
-            "smart_action": entry.get("smart_action") or guide["smart_action"],
-        }
+    # Optional custom overrides from database
+    custom_entry = {}
+    if custom_map:
+        if raw_key in custom_map:
+            custom_entry = custom_map[raw_key]
+        elif canonical_key in custom_map:
+            custom_entry = custom_map[canonical_key]
+
+    category = custom_entry.get("category") or default_entry.get("category") or f"Recyclable – {canonical_key.title()}"
+    current_use = custom_entry.get("current_use") or default_entry.get("current_use") or "Widely used in everyday commercial, beverage, and consumer packaging."
+    recommendation = custom_entry.get("recommendation") or default_entry.get("recommendation") or "Follow campus recycling and segregation guidelines."
+    disposal_tips = custom_entry.get("disposal_tips") or default_entry.get("disposal_tips") or "Rinse residue and place in the designated collection station."
+    what_can_be_made = custom_entry.get("what_can_be_made") or default_entry.get("what_can_be_made") or DEFAULT_RECOMMENDATIONS.get("other", {}).get("what_can_be_made", [])
+    segregation_bin = custom_entry.get("segregation_bin") or guide.get("segregation_bin") or "Campus Recycling Station"
+    recycling_method = custom_entry.get("recycling_method") or guide.get("recycling_method") or recommendation
+    future_summary = custom_entry.get("future_summary") or guide.get("future_summary") or "Circular recycled materials & products"
+    smart_action = custom_entry.get("smart_action") or guide.get("smart_action") or "Deposit at Smart Bin → Earn reward points"
 
     return {
-        "class_name": key or "unknown",
-        "category": "Unknown / General Waste",
-        "current_use": "Mixed or unrecognized everyday waste item.",
-        "recommendation": (
-            "Class not recognized in the recommendation database. "
-            "Dispose according to local municipal waste rules."
-        ),
-        "disposal_tips": "Contact your local recycling center for guidance.",
-        "what_can_be_made": DEFAULT_RECOMMENDATIONS.get("other", {}).get("what_can_be_made", []),
-        "segregation_bin": guide["segregation_bin"],
-        "recycling_method": guide["recycling_method"],
-        "future_summary": guide["future_summary"],
-        "smart_action": guide["smart_action"],
+        "class_name": canonical_key,
+        "raw_name": raw_key,
+        "display_name": canonical_key.title(),
+        "category": category,
+        "current_use": current_use,
+        "recommendation": recommendation,
+        "disposal_tips": disposal_tips,
+        "what_can_be_made": what_can_be_made,
+        "segregation_bin": segregation_bin,
+        "recycling_method": recycling_method,
+        "future_summary": future_summary,
+        "smart_action": smart_action,
     }
 
 
@@ -445,6 +504,11 @@ def list_all_recommendations(custom_map: Optional[Dict] = None) -> Dict[str, Dic
     merged = {k: dict(v) for k, v in DEFAULT_RECOMMENDATIONS.items()}
     if custom_map:
         for k, v in custom_map.items():
-            merged[k] = {**merged.get(k, {}), **v}
+            canonical = normalize_class_name(k)
+            if canonical in merged:
+                merged[canonical] = {**merged[canonical], **v}
+            else:
+                merged[k] = v
     return merged
+
 
