@@ -62,10 +62,23 @@ def normalize_image(image: np.ndarray) -> np.ndarray:
     return rgb.astype(np.float32) / 255.0
 
 
+def enhance_contrast_adaptive(image: np.ndarray, clip_limit: float = 2.0) -> np.ndarray:
+    """Enhance illumination & local contrast using CLAHE for webcam/low-light frames."""
+    if image is None or image.size == 0:
+        return image
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(8, 8))
+    cl = clahe.apply(l)
+    limg = cv2.merge((cl, a, b))
+    return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+
+
 def preprocess_for_yolo(
     image_or_path: Union[np.ndarray, PathLike],
     size: int = 640,
     denoise: bool = True,
+    enhance_light: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Full preprocessing pipeline for inference display / optional tensor use.
@@ -78,6 +91,9 @@ def preprocess_for_yolo(
         original = load_image(image_or_path)
     else:
         original = image_or_path.copy()
+
+    if enhance_light:
+        original = enhance_contrast_adaptive(original)
 
     if denoise:
         original = reduce_noise(original)

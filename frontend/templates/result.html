@@ -192,7 +192,7 @@
   </section>
 
   <div class="dash-card-head" style="margin-bottom:12px;">
-    <h2 style="font-size:1.35rem;">Detected waste information</h2>
+    <h2 style="font-size:1.35rem;">Detected waste information &amp; Recycling Guidance</h2>
   </div>
 
   {% if result.unique_waste_items %}
@@ -213,29 +213,53 @@
         </div>
         <div>
           <dt>Waste category</dt>
-          <dd>{{ item.category }}</dd>
+          <dd>{{ item.category or ('Recyclable – ' ~ item.display_name) }}</dd>
         </div>
         <div>
-          <dt>Proper segregation</dt>
-          <dd>{{ item.segregation_bin or item.bin_info.bin_type }}</dd>
+          <dt>Proper segregation bin</dt>
+          <dd>
+            <strong>{{ item.segregation_bin or (item.bin_info.bin_type if item.bin_info else 'Campus Recycling Station') }}</strong>
+            {% if item.bin_info and item.bin_info.location %}
+              <div style="font-size:0.75rem;color:#64748b;margin-top:2px;">📍 {{ item.bin_info.location }}</div>
+            {% endif %}
+          </dd>
         </div>
         <div>
           <dt>Current use / application</dt>
-          <dd>{{ item.current_use }}</dd>
+          <dd>{{ item.current_use or 'Commonly used in everyday commercial packaging and university consumables.' }}</dd>
         </div>
         <div>
           <dt>Future useful product</dt>
-          <dd>{{ item.future_summary or (item.what_can_be_made[0].title if item.what_can_be_made else 'Circular recycled goods') }}</dd>
+          <dd>{{ item.future_summary or (item.what_can_be_made[0].title if item.what_can_be_made else 'Recycled raw materials & upcycled products') }}</dd>
         </div>
         <div>
           <dt>Recycling / reuse method</dt>
           <dd>{{ item.recycling_method or item.recommendation }}</dd>
         </div>
         <div>
-          <dt>Smart action</dt>
-          <dd>{{ item.smart_action }}</dd>
+          <dt>Smart action &amp; incentive</dt>
+          <dd><span style="color:#15803d;font-weight:700;">{{ item.smart_action or 'Deposit in reverse vending machine → Earn reward points' }}</span></dd>
         </div>
       </dl>
+
+      {% if item.what_can_be_made %}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
+        <div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;color:#475569;letter-spacing:0.04em;margin-bottom:8px;">
+          ✨ Circular Upcycling Products
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          {% for prod in item.what_can_be_made[:3] %}
+          <div style="display:flex;align-items:flex-start;gap:8px;background:#f8fafc;padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;">
+            <span style="font-size:1.1rem;flex-shrink:0;">{{ prod.icon or '♻️' }}</span>
+            <div style="min-width:0;">
+              <div style="font-size:0.82rem;font-weight:700;color:#0f172a;">{{ prod.title }}</div>
+              <div style="font-size:0.75rem;color:#64748b;line-height:1.35;">{{ prod.description }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </article>
     {% endfor %}
   </div>

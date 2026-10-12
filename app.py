@@ -67,7 +67,7 @@ from database import (
 )
 from detection import detect_waste, model_status
 from evaluation.evaluate import get_model_metrics
-from recommendations import list_all_recommendations
+from recommendations import list_all_recommendations, get_recommendation, normalize_class_name
 
 app = Flask(
     __name__,
@@ -582,39 +582,42 @@ def api_detect():
 
 @app.route("/api/live_detect", methods=["POST"])
 def api_live_detect():
-    """JSON API for live detection from base64 image data."""
+    """JSON API for real-time live detection from base64 image frame."""
     data = request.get_json()
     if not data or "image_data" not in data:
         return jsonify({"success": False, "error": "No image data"}), 400
-    
+
     import base64
-    import io
-    from PIL import Image
-    
+    import cv2
+    import numpy as np
+
     try:
         raw_data = data["image_data"]
-        # Safe base64 decoding (handle data URL prefix if present)
+        # Safe base64 decoding
         if "," in raw_data:
             image_b64 = raw_data.split(",", 1)[1]
         else:
             image_b64 = raw_data
-            
+
         image_bytes = base64.b64decode(image_b64)
-        image = Image.open(io.BytesIO(image_bytes))
-        
-        # Ensure image is in RGB mode for JPEG encoding / YOLO
-        if image.mode != "RGB":
-            image = image.convert("RGB")
-        
-        # Save temp image for detection
-        fname = f"live_{uuid.uuid4().hex}.jpg"
-        save_path = config.UPLOAD_DIR / fname
-        image.save(save_path, "JPEG", quality=85)
-        
-        # Run detection
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        if img_bgr is None:
+            return jsonify({"success": False, "error": "Could not decode frame"}), 400
+
+        user_conf = float(data.get("confidence", 0.16))
         rec_map = get_recommendations_map()
-        result = detect_waste(save_path, recommendations_map=rec_map, save_result=True)
-        
+
+        # Run in-memory detection with CLAHE lighting enhancement
+        result = detect_waste(
+            img_bgr,
+            conf=user_conf,
+            is_live_stream=True,
+            save_result=False,
+            recommendations_map=rec_map,
+        )
+
         # Get bin location and map coordinates
         bin_location = None
         bin_type = None
@@ -624,7 +627,7 @@ def api_live_detect():
         bin_color = "#34d399"
         bin_icon = "🗑️"
         bin_info = None
-        
+
         if result["primary_class"]:
             bin_info = config.BIN_LOCATIONS.get(result["primary_class"]) or config.BIN_LOCATIONS.get("other")
             if bin_info:
@@ -635,20 +638,6 @@ def api_live_detect():
                 bin_lng = bin_info.get("lng")
                 bin_color = bin_info.get("color", "#34d399")
                 bin_icon = bin_info.get("icon", "🗑️")
-        
-        # Auto-save live detection to database if valid detection found
-        det_id = None
-        if result.get("primary_class"):
-            det_id = save_detection(
-                original_image=f"uploads/{fname}",
-                result_image=result["result_image"] or "",
-                detections=result["detections"],
-                primary_class=result["primary_class"],
-                primary_confidence=result["primary_confidence"],
-                recommendation=result["primary_recommendation"] or "",
-                bin_location=bin_location,
-                model_mode="live",
-            )
 
         rules_map = get_waste_points_map()
         deposit_items = []
@@ -689,7 +678,7 @@ def api_live_detect():
 
         response = {
             "success": True,
-            "detection_id": det_id,
+            "detection_id": None,
             "primary_class": result["primary_class"],
             "confidence": result["primary_confidence"],
             "confidence_pct": round(result["primary_confidence"] * 100, 1) if result["primary_confidence"] else 0,
@@ -703,14 +692,13 @@ def api_live_detect():
             "bin_info": bin_info,
             "recommendation": result["primary_recommendation"],
             "what_can_be_made": result.get("what_can_be_made", []),
+            "unique_waste_items": result.get("unique_waste_items", []),
             "detections": result["detections"],
-            "result_image": result.get("result_image"),
-            "upload_url": f"uploads/{fname}",
             "deposit_items": deposit_items,
             "total_est_points": total_est_points,
             "total_est_weight": round(total_est_weight, 3),
         }
-        
+
         return jsonify(response)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

@@ -1,4 +1,4 @@
-path: .
+path: d:/waste_detection_recycling_project/waste_detection_small_dataset
 
 train: train/images
 val: valid/images
